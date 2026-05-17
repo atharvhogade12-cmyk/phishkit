@@ -123,7 +123,7 @@ banner() {
 		${ORANGE}| .__/|_| |_||_|___/_| |_|_|\_\_|\__|
 		${ORANGE}|_|                      ${RED}Version : ${__version__}
 
-		${GREEN}[${WHITE}-${GREEN}]${CYAN} Tool Created by ERA THE HACKER${WHITE}
+		${GREEN}[${WHITE}-${GREEN}]${CYAN} Tool Created by atharvhogade12-cmyk${WHITE}
 	EOF
 }
 
@@ -329,7 +329,7 @@ ecosystem_diagram() {
 about() {
 	{ clear; banner; echo; }
 	cat <<- EOF
-		${GREEN} Author   ${RED}:  ${ORANGE}ERA ${RED}[ ${ORANGE}atharvhogade12-cmyk ${RED}]
+		${GREEN} Author   ${RED}:  ${ORANGE}atharvhogade12-cmyk${RED}
 		${GREEN} Version  ${RED}:  ${ORANGE}${__version__}
 
 		${WHITE} ${REDBG}Warning:${RESETBG}
