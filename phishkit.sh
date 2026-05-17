@@ -184,6 +184,14 @@ dependencies() {
 }
 
 # Download Binaries
+#!/usr/bin/env bash
+
+# Prevent execution under an unstable or basic shell interpreter
+if [ -z "$BASH_VERSION" ]; then
+    echo "Crucial Error: This script must be executed directly via bash! Run: bash <script_name>" >&2
+    exit 1
+fi
+
 download() {
     # Ensure pipeline failures are captured accurately
     set -o pipefail
@@ -193,6 +201,39 @@ download() {
     local file
     file=$(basename "$url")
     
+    # 1. PERMISSION CHECK: Termux cannot execute binaries in shared internal storage (/sdcard)
+    if [[ "$PWD" == *"/sdcard"* || "$PWD" == *"/storage/emulated/"* ]]; then
+        echo -e "\n${RED}[!] PERILOUS ENVIRONMENT DETECTED:${WHITE}"
+        echo -e "${YELLOW}Android blocks binary execution inside shared storage directories.${WHITE}"
+        echo -e "${YELLOW}Please move this script to your Termux home directory (~/) and try again.${WHITE}\n"
+        return 1
+    fi
+
+    # 2. DEPENDENCY CHECK: Automatically detect and provision missing Termux packages
+    local missing_pkgs=()
+    for cmd in unzip tar chmod; do
+        if ! command -v "$cmd" &> /dev/null; then
+            missing_pkgs+=("$cmd")
+        fi
+    done
+    
+    # Check for at least one network retriever
+    if ! command -v curl &> /dev/null && ! command -v wget &> /dev/null; then
+        missing_pkgs+=("curl")
+    fi
+
+    # If packages are missing, forcefully install them using Termux pkg manager
+    if [[ ${#missing_pkgs[@]} -ne 0 ]]; then
+        echo -e "${CYAN}Missing system dependencies detected: ${missing_pkgs[*]}.${WHITE}"
+        echo -e "${CYAN}Initiating automated package provisioning...${WHITE}"
+        pkg update -y && pkg install -y "${missing_pkgs[@]}"
+        
+        if [[ $? -ne 0 ]]; then
+            echo -e "${RED}[!] Error: Failed to install required packages automatically.${WHITE}"
+            return 1
+        fi
+    fi
+
     # Ensure the destination directory exists
     mkdir -p .server
 
@@ -202,7 +243,7 @@ download() {
     
     echo -e "${CYAN}Downloading from: ${url}${WHITE}"
     
-    # Removed '|| true' so we can actually capture curl's failure
+    # Download attempt utilizing Curl
     curl -k --connect-timeout 10 --max-time 30 --retry 5 --retry-delay 1 \
         --location --output "${file}" "${url}" 2>&1 | grep -v "^  %"
     
@@ -219,15 +260,14 @@ download() {
                 return 1
             fi
         else
-            echo -e "\n${RED}[${WHITE}!${RED}]${RED} Error: Wget not found. Could not download ${output}${WHITE}"
+            echo -e "\n${RED}[${WHITE}!${RED}]${RED} Error: Wget unavailable. Could not download ${output}${WHITE}"
             return 1
         fi
     fi
 
+    # 3. EXTRACTION AND DEPLOYMENT MATRIX
     if [[ -f "$file" ]]; then
         if [[ $file == *.zip ]]; then
-            # Extracting directly to the destination folder if it's a single file, 
-            # or handling extraction carefully is required here depending on your zip structure.
             unzip -qq -o "$file" -d .server/ > /dev/null 2>&1
         elif [[ $file == *.tar.gz ]] || [[ $file == *.tgz ]]; then
             tar -zxf "$file" -C .server/ > /dev/null 2>&1
@@ -235,13 +275,16 @@ download() {
             mv -f "$file" ".server/$output" > /dev/null 2>&1
         fi
         
-        # Verify the file actually exists before changing permissions
+        # Verify deployment integrity before running chmod
         if [[ -e ".server/$output" ]]; then
             chmod +x ".server/$output" > /dev/null 2>&1
+            rm -rf "$file"
+            echo -e "${GREEN}[${WHITE}+${GREEN}] ${output} deployed successfully inside Termux environment!${WHITE}"
+        else
+            echo -e "\n${RED}[${WHITE}!${RED}]${RED} Error: Extracted executable file could not be mapped to '.server/$output'."
+            rm -rf "$file"
+            return 1
         fi
-        
-        rm -rf "$file"
-        echo -e "${GREEN}[${WHITE}+${GREEN}] ${output} downloaded successfully${WHITE}"
     else
         echo -e "\n${RED}[${WHITE}!${RED}]${RED} Error occurred: Downloaded target file missing."
         return 1
