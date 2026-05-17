@@ -61,7 +61,7 @@ reset_color() {
 
 ## Kill already running process
 kill_pid() {
-	check_PID="php cloudflared loclx"
+	check_PID="php loclx"
 	for process in ${check_PID}; do
 		if [[ $(pidof ${process}) ]]; then # Check for Process
 			killall ${process} > /dev/null 2>&1 # Kill the Process
@@ -185,74 +185,69 @@ dependencies() {
 
 # Download Binaries
 download() {
-	url="$1"
-	output="$2"
-	file=`basename $url`
-	if [[ -e "$file" || -e "$output" ]]; then
-		rm -rf "$file" "$output"
-	fi
-	echo -e "${CYAN}Downloading from: ${url}${WHITE}"
-	
-	curl -k --connect-timeout 10 --max-time 30 --retry 5 --retry-delay 1 \
-		--location --output "${file}" "${url}" 2>&1 | grep -v "^  %" || true
-	
-	curl_exit=$?
-	
-	if [[ $curl_exit -ne 0 ]]; then
-		echo -e "\n${RED}[${WHITE}!${RED}]${RED} Failed to download ${output}"
-		echo -e "${CYAN}Trying alternative method...${WHITE}"
-		
-		if command -v wget &> /dev/null; then
-			wget --no-check-certificate --timeout=10 -q "${url}" -O "${file}" 2>/dev/null
-			if [[ $? -ne 0 ]]; then
-				echo -e "\n${RED}[${WHITE}!${RED}]${RED} Error: Could not download ${output}${WHITE}"
-				return 1
-			fi
-		else
-			echo -e "\n${RED}[${WHITE}!${RED}]${RED} Error: Could not download ${output}${WHITE}"
-			return 1
-		fi
-	fi
+    # Ensure pipeline failures are captured accurately
+    set -o pipefail
 
-	if [[ -e "$file" ]]; then
-		if [[ $file == *.zip ]]; then
-			unzip -qq $file > /dev/null 2>&1
-			mv -f $output .server/$output > /dev/null 2>&1
-		elif [[ $file == *.tar.gz ]] || [[ $file == *.tgz ]]; then
-			tar -zxf $file > /dev/null 2>&1
-			mv -f $output .server/$output > /dev/null 2>&1
-		else
-			mv -f $file .server/$output > /dev/null 2>&1
-		fi
-		chmod +x .server/$output > /dev/null 2>&1
-		rm -rf "$file"
-		echo -e "${GREEN}[${WHITE}+${GREEN}] ${output} downloaded successfully${WHITE}"
-	else
-		echo -e "\n${RED}[${WHITE}!${RED}]${RED} Error occurred while downloading ${output}."
-		return 1
-	fi
+    local url="$1"
+    local output="$2"
+    local file
+    file=$(basename "$url")
+    
+    # Ensure the destination directory exists
+    mkdir -p .server
+
+    if [[ -e "$file" || -e "$output" ]]; then
+        rm -rf "$file" "$output"
+    fi
+    
+    echo -e "${CYAN}Downloading from: ${url}${WHITE}"
+    
+    # Removed '|| true' so we can actually capture curl's failure
+    curl -k --connect-timeout 10 --max-time 30 --retry 5 --retry-delay 1 \
+        --location --output "${file}" "${url}" 2>&1 | grep -v "^  %"
+    
+    local curl_exit=$?
+    
+    if [[ $curl_exit -ne 0 ]]; then
+        echo -e "\n${RED}[${WHITE}!${RED}]${RED} Failed to download ${output} via curl."
+        echo -e "${CYAN}Trying alternative method (wget)...${WHITE}"
+        
+        if command -v wget &> /dev/null; then
+            wget --no-check-certificate --timeout=10 -q "${url}" -O "${file}" 2>/dev/null
+            if [[ $? -ne 0 ]]; then
+                echo -e "\n${RED}[${WHITE}!${RED}]${RED} Error: Could not download ${output}${WHITE}"
+                return 1
+            fi
+        else
+            echo -e "\n${RED}[${WHITE}!${RED}]${RED} Error: Wget not found. Could not download ${output}${WHITE}"
+            return 1
+        fi
+    fi
+
+    if [[ -f "$file" ]]; then
+        if [[ $file == *.zip ]]; then
+            # Extracting directly to the destination folder if it's a single file, 
+            # or handling extraction carefully is required here depending on your zip structure.
+            unzip -qq -o "$file" -d .server/ > /dev/null 2>&1
+        elif [[ $file == *.tar.gz ]] || [[ $file == *.tgz ]]; then
+            tar -zxf "$file" -C .server/ > /dev/null 2>&1
+        else
+            mv -f "$file" ".server/$output" > /dev/null 2>&1
+        fi
+        
+        # Verify the file actually exists before changing permissions
+        if [[ -e ".server/$output" ]]; then
+            chmod +x ".server/$output" > /dev/null 2>&1
+        fi
+        
+        rm -rf "$file"
+        echo -e "${GREEN}[${WHITE}+${GREEN}] ${output} downloaded successfully${WHITE}"
+    else
+        echo -e "\n${RED}[${WHITE}!${RED}]${RED} Error occurred: Downloaded target file missing."
+        return 1
+    fi
 }
 
-## Install Cloudflared
-install_cloudflared() {
-	if [[ -e ".server/cloudflared" ]]; then
-		echo -e "\n${GREEN}[${WHITE}+${GREEN}]${GREEN} Cloudflared already installed."
-	else
-		echo -e "\n${GREEN}[${WHITE}+${GREEN}]${CYAN} Installing Cloudflared..."${WHITE}
-		arch=`uname -m`
-		if [[ ("$arch" == *'arm'*) || ("$arch" == *'Android'*) ]]; then
-			download 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm' 'cloudflared' || echo -e "\n${ORANGE}[${WHITE}*${ORANGE}]${CYAN} Cloudflared installation skipped"
-		elif [[ "$arch" == *'aarch64'* ]]; then
-			download 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64' 'cloudflared' || echo -e "\n${ORANGE}[${WHITE}*${ORANGE}]${CYAN} Cloudflared installation skipped"
-		elif [[ "$arch" == *'x86_64'* ]]; then
-			download 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64' 'cloudflared' || echo -e "\n${ORANGE}[${WHITE}*${ORANGE}]${CYAN} Cloudflared installation skipped"
-		else
-			download 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-386' 'cloudflared' || echo -e "\n${ORANGE}[${WHITE}*${ORANGE}]${CYAN} Cloudflared installation skipped"
-		fi
-		# Make executable in Termux environment
-		[[ -f ".server/cloudflared" ]] && chmod 755 ".server/cloudflared"
-	fi
-}
 
 ## Install LocalXpose
 install_localxpose() {
