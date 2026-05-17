@@ -188,6 +188,11 @@ download() {
 	fi
 	curl --silent --insecure --fail --retry-connrefused \
 		--retry 3 --retry-delay 2 --location --output "${file}" "${url}"
+	
+	if [[ $? -ne 0 ]]; then
+		echo -e "\n${RED}[${WHITE}!${RED}]${RED} Error occurred while downloading ${output}."
+		{ reset_color; exit 1; }
+	fi
 
 	if [[ -e "$file" ]]; then
 		if [[ ${file#*.} == "zip" ]]; then
@@ -202,7 +207,7 @@ download() {
 		chmod +x .server/$output > /dev/null 2>&1
 		rm -rf "$file"
 	else
-		echo -e "\n${RED}[${WHITE}!${RED}]${RED} Error occured while downloading ${output}."
+		echo -e "\n${RED}[${WHITE}!${RED}]${RED} Error occurred while downloading ${output}."
 		{ reset_color; exit 1; }
 	fi
 }
