@@ -1,12 +1,15 @@
+## Project Structure
+
+```text
 phishkit/
-├── phishkit.sh          # Main management script
+├── phishkit.sh         # Main management script
 ├── .sites/
-│   ├── ip.php           # IP logger (loaded on every page)
+│   ├── ip.php          # IP logger (loaded on every page)
 │   ├── facebook/
-│   │   ├── index.php    # Device detection
-│   │   ├── login.html   # Desktop login page
-│   │   ├── mobile.html  # Mobile login page
-│   │   ├── login.php    # Credential capture handler
+│   │   ├── index.php   # Device detection
+│   │   ├── login.html  # Desktop login page
+│   │   ├── mobile.html # Mobile login page
+│   │   ├── login.php   # Credential capture handler
 │   │   └── style.css
 │   ├── instagram/
 │   │   ├── index.php
@@ -22,4 +25,5 @@ phishkit/
 │       ├── index.html
 │       ├── login.php
 │       └── style.css
-└── auth/                # Captured data stored here
+└── auth/               # Captured data stored here
+```
