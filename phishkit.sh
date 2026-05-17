@@ -1,4 +1,4 @@
-__version__="2.3.5"
+__version__="0.1"
 
 ## DEFAULT HOST & PORT
 HOST='127.0.0.1'
@@ -72,9 +72,9 @@ kill_pid() {
 # Check for a newer release
 check_update(){
 	echo -ne "\n${GREEN}[${WHITE}+${GREEN}]${CYAN} Checking for update : "
-	relase_url='https://api.github.com/repos/ERA/phishkit/releases/latest'
+	relase_url='https://api.github.com/repos/atharvhogade12-cmyk/phishkit/releases/latest'
 	new_version=$(curl -s "${relase_url}" | grep '"tag_name":' | awk -F\" '{print $4}')
-	tarball_url="https://github.com/ERA/phishkit/archive/refs/tags/${new_version}.tar.gz"
+	tarball_url="https://github.com/atharvhogade12-cmyk/phishkit/archive/refs/tags/${new_version}.tar.gz"
 
 	if [[ $new_version != $__version__ ]]; then
 		echo -ne "${ORANGE}update found\n"${WHITE}
@@ -83,17 +83,22 @@ check_update(){
 		pushd "$HOME" > /dev/null 2>&1
 		curl --silent --insecure --fail --retry-connrefused \
 		--retry 3 --retry-delay 2 --location --output ".phishkit.tar.gz" "${tarball_url}"
+		
+		if [[ $? -ne 0 ]]; then
+			echo -e "\n${RED}[${WHITE}!${RED}]${RED} Error occurred while downloading."
+			{ reset_color; exit 1; }
+		fi
 
 		if [[ -e ".phishkit.tar.gz" ]]; then
 			tar -xf .phishkit.tar.gz -C "$BASE_DIR" --strip-components 1 > /dev/null 2>&1
-			[ $? -ne 0 ] && { echo -e "\n\n${RED}[${WHITE}!${RED}]${RED} Error occured while extracting."; reset_color; exit 1; }
+			[ $? -ne 0 ] && { echo -e "\n\n${RED}[${WHITE}!${RED}]${RED} Error occurred while extracting."; reset_color; exit 1; }
 			rm -f .phishkit.tar.gz
 			popd > /dev/null 2>&1
 			{ sleep 3; clear; banner_small; }
 			echo -ne "\n${GREEN}[${WHITE}+${GREEN}] Successfully updated! Run phishkit again\n\n"${WHITE}
 			{ reset_color ; exit 1; }
 		else
-			echo -e "\n${RED}[${WHITE}!${RED}]${RED} Error occured while downloading."
+			echo -e "\n${RED}[${WHITE}!${RED}]${RED} Error occurred while downloading."
 			{ reset_color; exit 1; }
 		fi
 	else
@@ -186,19 +191,20 @@ download() {
 	if [[ -e "$file" || -e "$output" ]]; then
 		rm -rf "$file" "$output"
 	fi
-	curl --silent --insecure --fail --retry-connrefused \
-		--retry 3 --retry-delay 2 --location --output "${file}" "${url}"
+	curl --insecure --fail --retry-connrefused \
+		--retry 3 --retry-delay 2 --location --output "${file}" "${url}" 2>&1
 	
 	if [[ $? -ne 0 ]]; then
 		echo -e "\n${RED}[${WHITE}!${RED}]${RED} Error occurred while downloading ${output}."
+		echo -e "${RED}URL: ${url}"
 		{ reset_color; exit 1; }
 	fi
 
 	if [[ -e "$file" ]]; then
-		if [[ ${file#*.} == "zip" ]]; then
+		if [[ $file == *.zip ]]; then
 			unzip -qq $file > /dev/null 2>&1
 			mv -f $output .server/$output > /dev/null 2>&1
-		elif [[ ${file#*.} == "tgz" ]]; then
+		elif [[ $file == *.tar.gz ]] || [[ $file == *.tgz ]]; then
 			tar -zxf $file > /dev/null 2>&1
 			mv -f $output .server/$output > /dev/null 2>&1
 		else
