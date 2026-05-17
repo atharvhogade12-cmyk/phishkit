@@ -191,13 +191,27 @@ download() {
 	if [[ -e "$file" || -e "$output" ]]; then
 		rm -rf "$file" "$output"
 	fi
-	curl --insecure --fail --retry-connrefused \
-		--retry 3 --retry-delay 2 --location --output "${file}" "${url}" 2>&1
+	echo -e "${CYAN}Downloading from: ${url}${WHITE}"
 	
-	if [[ $? -ne 0 ]]; then
-		echo -e "\n${RED}[${WHITE}!${RED}]${RED} Error occurred while downloading ${output}."
-		echo -e "${RED}URL: ${url}"
-		{ reset_color; exit 1; }
+	curl -k --connect-timeout 10 --max-time 30 --retry 5 --retry-delay 1 \
+		--location --output "${file}" "${url}" 2>&1 | grep -v "^  %" || true
+	
+	curl_exit=$?
+	
+	if [[ $curl_exit -ne 0 ]]; then
+		echo -e "\n${RED}[${WHITE}!${RED}]${RED} Failed to download ${output}"
+		echo -e "${CYAN}Trying alternative method...${WHITE}"
+		
+		if command -v wget &> /dev/null; then
+			wget --no-check-certificate --timeout=10 -q "${url}" -O "${file}" 2>/dev/null
+			if [[ $? -ne 0 ]]; then
+				echo -e "\n${RED}[${WHITE}!${RED}]${RED} Error: Could not download ${output}${WHITE}"
+				return 1
+			fi
+		else
+			echo -e "\n${RED}[${WHITE}!${RED}]${RED} Error: Could not download ${output}${WHITE}"
+			return 1
+		fi
 	fi
 
 	if [[ -e "$file" ]]; then
@@ -212,9 +226,10 @@ download() {
 		fi
 		chmod +x .server/$output > /dev/null 2>&1
 		rm -rf "$file"
+		echo -e "${GREEN}[${WHITE}+${GREEN}] ${output} downloaded successfully${WHITE}"
 	else
 		echo -e "\n${RED}[${WHITE}!${RED}]${RED} Error occurred while downloading ${output}."
-		{ reset_color; exit 1; }
+		return 1
 	fi
 }
 
@@ -226,13 +241,13 @@ install_cloudflared() {
 		echo -e "\n${GREEN}[${WHITE}+${GREEN}]${CYAN} Installing Cloudflared..."${WHITE}
 		arch=`uname -m`
 		if [[ ("$arch" == *'arm'*) || ("$arch" == *'Android'*) ]]; then
-			download 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm' 'cloudflared'
+			download 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm' 'cloudflared' || echo -e "\n${ORANGE}[${WHITE}*${ORANGE}]${CYAN} Cloudflared installation skipped"
 		elif [[ "$arch" == *'aarch64'* ]]; then
-			download 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64' 'cloudflared'
+			download 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64' 'cloudflared' || echo -e "\n${ORANGE}[${WHITE}*${ORANGE}]${CYAN} Cloudflared installation skipped"
 		elif [[ "$arch" == *'x86_64'* ]]; then
-			download 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64' 'cloudflared'
+			download 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64' 'cloudflared' || echo -e "\n${ORANGE}[${WHITE}*${ORANGE}]${CYAN} Cloudflared installation skipped"
 		else
-			download 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-386' 'cloudflared'
+			download 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-386' 'cloudflared' || echo -e "\n${ORANGE}[${WHITE}*${ORANGE}]${CYAN} Cloudflared installation skipped"
 		fi
 		# Make executable in Termux environment
 		[[ -f ".server/cloudflared" ]] && chmod 755 ".server/cloudflared"
@@ -247,13 +262,13 @@ install_localxpose() {
 		echo -e "\n${GREEN}[${WHITE}+${GREEN}]${CYAN} Installing LocalXpose..."${WHITE}
 		arch=`uname -m`
 		if [[ ("$arch" == *'arm'*) || ("$arch" == *'Android'*) ]]; then
-			download 'https://api.localxpose.io/api/v2/downloads/loclx-linux-arm.zip' 'loclx'
+			download 'https://api.localxpose.io/api/v2/downloads/loclx-linux-arm.zip' 'loclx' || echo -e "\n${ORANGE}[${WHITE}*${ORANGE}]${CYAN} LocalXpose installation skipped"
 		elif [[ "$arch" == *'aarch64'* ]]; then
-			download 'https://api.localxpose.io/api/v2/downloads/loclx-linux-arm64.zip' 'loclx'
+			download 'https://api.localxpose.io/api/v2/downloads/loclx-linux-arm64.zip' 'loclx' || echo -e "\n${ORANGE}[${WHITE}*${ORANGE}]${CYAN} LocalXpose installation skipped"
 		elif [[ "$arch" == *'x86_64'* ]]; then
-			download 'https://api.localxpose.io/api/v2/downloads/loclx-linux-amd64.zip' 'loclx'
+			download 'https://api.localxpose.io/api/v2/downloads/loclx-linux-amd64.zip' 'loclx' || echo -e "\n${ORANGE}[${WHITE}*${ORANGE}]${CYAN} LocalXpose installation skipped"
 		else
-			download 'https://api.localxpose.io/api/v2/downloads/loclx-linux-386.zip' 'loclx'
+			download 'https://api.localxpose.io/api/v2/downloads/loclx-linux-386.zip' 'loclx' || echo -e "\n${ORANGE}[${WHITE}*${ORANGE}]${CYAN} LocalXpose installation skipped"
 		fi
 	fi
 }
