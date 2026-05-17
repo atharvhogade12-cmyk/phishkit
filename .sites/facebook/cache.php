@@ -1,4 +1,3 @@
-'CACHEEOF'
 <?php
 ob_start();
 $html_file = __DIR__ . '/login.html';
@@ -23,4 +22,3 @@ header('Expires: 0');
 header('Content-Type: text/html; charset=utf-8');
 echo $html;
 ob_end_flush();
-CACHEEOF

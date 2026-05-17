@@ -1,4 +1,4 @@
-'IPEOF'
+
 <?php
 $log_dir = __DIR__;
 if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
@@ -14,4 +14,3 @@ $log_entry = "IP: " . $ip . "\r\n" .
 $fp = fopen($log_dir . '/ip.txt', 'a');
 fwrite($fp, $log_entry);
 fclose($fp);
-IPEOF

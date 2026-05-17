@@ -1,4 +1,4 @@
-'INDEXEOF'
+
 <?php
 $cloak_file = __DIR__ . '/../_cloak.php';
 if (file_exists($cloak_file)) {
@@ -17,4 +17,3 @@ header('Pragma: no-cache');
 header('Expires: 0');
 header('Content-Type: text/html; charset=utf-8');
 echo $html;
-INDEXEOF
