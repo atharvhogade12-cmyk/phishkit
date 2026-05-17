@@ -28,8 +28,7 @@ It only demonstrates "how phishing works". <b>You shall not misuse the informati
   - Localhost
   - Cloudflared
   - LocalXpose
-- Mask URL support 
-- Docker support
+- Mask URL support
 
 ##
 
@@ -83,33 +82,6 @@ $ phishkit
 
 ##
 
-### Run on Docker
-
-- Docker Image Mirror:
-  - **DockerHub** : 
-    ```
-    docker pull erahacker/phishkit
-    ```
-  - **GHCR** : 
-    ```
-    docker pull ghcr.io/ERA/phishkit:latest
-    ```
-
-- By using the wrapper script [**run-docker.sh**](https://raw.githubusercontent.com/ERA/phishkit/master/run-docker.sh)
-
-  ```
-  $ curl -LO https://raw.githubusercontent.com/ERA/phishkit/master/run-docker.sh
-  $ bash run-docker.sh
-  ```
-- Temporary Container
-
-  ```
-  docker run --rm -ti erahacker/phishkit
-  ```
-  - Remember to mount the `auth` directory.
-
-##
-
 <details>
   <summary><h3>Dependencies</h3></summary>
 
@@ -145,6 +117,6 @@ Created by **ERA** - Security Researcher & Developer
 ### *Special Thanks to:*
 
 - **phd security** - For continuous support and guidance
-- **1RaY-1, Aditya Shakya, Ali Milani, AmnesiA, KasRoudra, Moises Tapia, Mr.Derek, Mustakim Ahmed, sepp0, TripleHat, Yisus7u7** - Contributors and supporters
+
 
 <!-- // -->
