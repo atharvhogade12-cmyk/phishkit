@@ -36,7 +36,7 @@ It only demonstrates "how phishing works". <b>You shall not misuse the informati
 
 - Just, Clone this repository -
   ```
-  git clone --depth=1 https://github.com/ERA/phishkit.git
+  git clone https://github.com/atharvhogade12-cymk/phishkit.git
   ```
 
 - Now go to cloned directory and run `phishkit.sh` -
@@ -49,13 +49,7 @@ It only demonstrates "how phishing works". <b>You shall not misuse the informati
 
 ##
 
-### Installation (Termux)
-You can easily install phishkit in Termux by using tur-repo
-```
-$ pkg install tur-repo
-$ pkg install phishkit
-$ phishkit
-```
+
 ### A Note : 
 ***Termux discourages hacking*** .. So never discuss anything related to *phishkit* in any of the termux discussion groups. For more check : [wiki](https://wiki.termux.com/wiki/Hacking)
 
@@ -65,20 +59,7 @@ $ phishkit
 
 ##
 
-### Installation via ".deb" file
 
-- Download `.deb` files from the [**Latest Release**](https://github.com/ERA/phishkit/releases/latest)
-- If you are using ***termux*** then download the `*_termux.deb`
-
-- Install the `.deb` file by executing
-  ```
-  apt install <your path to deb file>
-  ```
-  Or
-  ```
-  $ dpkg -i <your path to deb file>
-  $ apt install -f
-  ```
 
 ##
 
