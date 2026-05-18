@@ -71,7 +71,7 @@ It only demonstrates "how phishing works". <b>You shall not misuse the informati
 - `curl`
 - `php`
 
-> All the dependencies will be installed automatically when you run **Zphisher** for the first time.
+> All the dependencies will be installed automatically when you run **Phishkit** for the first time.
 </details>
 
 <details>
